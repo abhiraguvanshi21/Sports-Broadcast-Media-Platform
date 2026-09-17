@@ -1,4 +1,4 @@
-# PrimeCast — Sports Broadcast & Media Platform
+# AWADH Sports Live — Sports Broadcast & Media Platform
 
 A complete sports broadcasting, live telecast, media-production **and** business-management platform, built from the *Sports Broadcast & Media Platform — Complete Project Plan v1.0*.
 
@@ -8,9 +8,23 @@ It is not just a showcase website: it combines a **public sports-media website**
 
 ## Project Overview
 
-- **Name**: PrimeCast Sports Media Platform (`webapp`)
+- **Name**: AWADH Sports Live (`webapp`)
+- **Tagline**: Every sport. Every moment. Live.
 - **Goal**: Public sports-media website + booking system without login + employee operations portal + admin control centre, built to grow without redesign.
 - **Plan sections implemented**: 4 (public pages), 5 (Live hub), 6 (booking workflow), 7 (employee portal), 8 (production manager), 9 (admin control centre), 10 (event & production mgmt), 11 (database), 13 (API architecture), 14 (RBAC matrix), 17 (UI direction), 18 (security checklist).
+
+## What We Do — 8 Services
+
+All eight are distinct deliverables (no repetition). Match **Production** creates the professional live feed; Digital **Streaming** delivers that feed to the online audience — different jobs.
+
+1. **Match Production** — Multi-camera match coverage, live direction, camera switching and production control.
+2. **Digital Streaming** — Deliver live matches to audiences through YouTube, Facebook and other digital platforms.
+3. **Sports Commentary** — Professional Hindi, English and bilingual commentary to bring every match to life.
+4. **Live Scores & Graphics** — Real-time scoreboards, player statistics, team line-ups, match results and on-screen graphics.
+5. **Sports Photography** — Professional action shots, player portraits, team photographs and event coverage.
+6. **Video Production** — Player interviews, promotional videos, sponsor films, event videos and behind-the-scenes content.
+7. **Highlights & Social Content** — Match highlights, best moments, reels, short-form edits and social media-ready content.
+8. **Tournament Media & Branding** — Sponsor visibility, tournament promotions, branded content and complete media support.
 
 ## URLs
 
@@ -60,6 +74,8 @@ Sign in at **/login**.
 | Production Manager | `manager@primecast.example` | `Password@123` |
 | Employee | `employee@primecast.example` | `Password@123` |
 
+> The demo login emails still use the legacy `@primecast.example` domain (they are the seeded accounts); the public-facing brand is **AWADH Sports Live**.
+
 - **Employee portal** (`/portal`): dashboard, attendance (check-in/out), my tasks, my events, production schedule, equipment, media upload, issue reports, leave, notifications.
 - **Admin control centre** (`/admin`): dashboard, bookings, customers, employees, roles & permissions, events, live control, tasks/production, equipment, media, portfolio/services, reports, notifications, CMS, activity logs, settings.
 - **Production Manager**: event/team/production access; blocked from CMS, settings and employee management (enforced server-side per the Section 14 matrix).
@@ -94,7 +110,7 @@ Sign in at **/login**.
 ## Deployment
 
 - **Platform**: Cloudflare Pages / Workers (Genspark Hosted Deploy).
-- **Status**: code complete, locally built & tested.
+- **Status**: ✅ Live & verified (deployed 2026-09-17 via Genspark Hosted Deploy).
 - **Last Updated**: 2026-09-17
 
 ## Local Development
