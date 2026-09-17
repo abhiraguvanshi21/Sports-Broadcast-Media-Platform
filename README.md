@@ -14,7 +14,7 @@ It is not just a showcase website: it combines a **public sports-media website**
 
 ## URLs
 
-- **Production**: _(set after Hosted Deploy)_
+- **Production**: https://0fc78a65-5636-4d4f-800e-f105bddb1b91.vip.gensparksite.com
 - **Local preview**: http://localhost:3000
 - **Health check**: `/api/health`
 
