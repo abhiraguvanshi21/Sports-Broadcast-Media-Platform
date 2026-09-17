@@ -12,6 +12,13 @@ It is not just a showcase website: it combines a **public sports-media website**
 - **Tagline**: Every sport. Every moment. Live.
 - **Goal**: Public sports-media website + booking system without login + employee operations portal + admin control centre, built to grow without redesign.
 - **Plan sections implemented**: 4 (public pages), 5 (Live hub), 6 (booking workflow), 7 (employee portal), 8 (production manager), 9 (admin control centre), 10 (event & production mgmt), 11 (database), 13 (API architecture), 14 (RBAC matrix), 17 (UI direction), 18 (security checklist).
+- **Contact**: Sector 142, Noida · +91 79854 28973 · info.awadhsports@gmail.com · YouTube [@awadh_sports](https://youtube.com/@awadh_sports.)
+- **Design theme**: derived from the AWADH logo — deep black base (`#0d0d11`), red/orange action accent (`#ff3c00`), electric-blue secondary (`#0088ff`).
+- **Contact entry**: a floating animated button in the bottom-right corner (not in the navbar).
+
+## Integrated content
+- **YouTube channel videos** — the last live broadcasts from the AWADH Sports channel are shown on the **Home**, **Live** and **Gallery** pages; the Live hub also supports a currently-live video and an **Upcoming** list. Managed by admin at `/admin/youtube`.
+- **About-page team** — Founder, Production Manager and Administrator are listed on `/about`; managed by admin at `/admin/team`.
 
 ## What We Do — 8 Services
 
@@ -65,19 +72,25 @@ Home · About · Services · Portfolio · Events (with per-event pages) · **Liv
 
 > **Security**: booking details are never shown from the Booking ID alone — **OTP verification is required**. OTPs are hashed at rest, expire in 10 minutes, and are attempt-limited. Internal admin notes are hidden from customers.
 
-### Staff / Admin portal
-Sign in at **/login**.
+### Login (all roles — single entry point)
+Sign in at **/login**. The page is a plain **Login** (no "staff/admin" wording).
+Every active role can sign in and is routed to the right place automatically:
 
-| Role | Demo account | Password |
-|---|---|---|
-| Admin | `admin@primecast.example` | `Admin@123` |
-| Production Manager | `manager@primecast.example` | `Password@123` |
-| Employee | `employee@primecast.example` | `Password@123` |
+| Role | Demo account | Password | Lands on |
+|---|---|---|---|
+| Admin | `admin@primecast.example` | `Admin@123` | `/admin` control centre |
+| Production Manager | `manager@primecast.example` | `Password@123` | `/portal` operations portal |
+| Employee | `employee@primecast.example` | `Password@123` | `/portal` operations portal |
+| Customer | `customer@awadhsports.example` | `Admin@123` | `/account` customer dashboard |
 
-> The demo login emails still use the legacy `@primecast.example` domain (they are the seeded accounts); the public-facing brand is **AWADH Sports Live**.
+> The seeded demo logins still use the legacy `@primecast.example` domain; the public-facing brand is **AWADH Sports Live**. New staff accounts are created by an admin (Employees module) with the email + password of your choice.
 
+- **Customer dashboard** (`/account`): signed-in customers see their bookings, statuses, message/quote counts and can update their profile (`/account/profile`) — and still browse the whole public website and create new bookings.
 - **Employee portal** (`/portal`): dashboard, attendance (check-in/out), my tasks, my events, production schedule, equipment, media upload, issue reports, leave, notifications.
-- **Admin control centre** (`/admin`): dashboard, bookings, customers, employees, roles & permissions, events, live control, tasks/production, equipment, media, portfolio/services, reports, notifications, CMS, activity logs, settings.
+- **Admin control centre** (`/admin`): dashboard, bookings, customers, employees, roles & permissions, events, live control, tasks/production, equipment, media, **YouTube videos**, **Team & About**, portfolio/services, reports, notifications, CMS, activity logs, settings.
+- **Admin → Employees**: create an employee account with **any email + password**; the person then signs in at `/login` and reaches their own portal. Admin can deactivate/reactivate any account and retains full control.
+- **Admin → YouTube Videos**: add videos by URL or ID (title + thumbnail auto-fetched), mark one as **Live** or **Upcoming**, hide/delete — controlling what appears on the Live hub, Gallery and Home.
+- **Admin → Team & About**: manage the About-page team members (Founder, Production Manager, Administrator …).
 - **Production Manager**: event/team/production access; blocked from CMS, settings and employee management (enforced server-side per the Section 14 matrix).
 
 ## Functional Entry URIs
@@ -85,9 +98,10 @@ Sign in at **/login**.
 | Area | Paths |
 |---|---|
 | Public | `/`, `/about`, `/services`, `/portfolio`, `/events`, `/events/:id`, `/live`, `/gallery`, `/contact`, `/careers`, `/book`, `/track` |
-| Auth | `/login` (POST), `/logout` (POST) |
+| Auth | `/login` (GET/POST), `/logout` (POST) |
+| Customer | `/account`, `/account/profile` |
 | Employee portal | `/portal`, `/portal/attendance`, `/portal/tasks`, `/portal/events`, `/portal/schedule`, `/portal/equipment`, `/portal/media`, `/portal/issues`, `/portal/leave`, `/portal/notifications` |
-| Admin | `/admin`, `/admin/bookings`, `/admin/bookings/:id`, `/admin/customers`, `/admin/employees`, `/admin/roles`, `/admin/events`, `/admin/events/:id`, `/admin/live`, `/admin/tasks`, `/admin/equipment`, `/admin/media`, `/admin/portfolio`, `/admin/reports`, `/admin/notifications`, `/admin/cms`, `/admin/logs`, `/admin/settings` |
+| Admin | `/admin`, `/admin/bookings`, `/admin/bookings/:id`, `/admin/customers`, `/admin/employees`, `/admin/roles`, `/admin/events`, `/admin/events/:id`, `/admin/live`, `/admin/tasks`, `/admin/equipment`, `/admin/media`, `/admin/youtube`, `/admin/team`, `/admin/portfolio`, `/admin/reports`, `/admin/notifications`, `/admin/cms`, `/admin/logs`, `/admin/settings` |
 | Public API | `POST /api/bookings`, `POST /api/bookings/track/request-otp`, `POST /api/bookings/track/verify`, `POST /api/contact`, `POST /api/careers/apply` |
 | Staff API | `POST /api/attendance/checkin`, `/checkout`, `POST /api/tasks/:id/status`, `POST /api/notifications/read-all`, `GET /api/health` |
 
@@ -104,7 +118,8 @@ Sign in at **/login**.
 
 - Payments / invoices, automated CRM workflows.
 - Email / SMS / WhatsApp delivery of OTPs and notifications (provider integration). *Currently the OTP is surfaced in the UI as a demo code because no provider is configured.*
-- Automated YouTube/platform channel API integration for latest-video retrieval.
+- Automatic YouTube sync (videos are added by admin from `/admin/youtube`; the title is auto-fetched from YouTube on add).
+- Customer self-registration (customer accounts are created by staff/admin; a seeded demo customer exists).
 - Advanced analytics / forecasting dashboards, PWA/mobile app.
 
 ## Deployment
