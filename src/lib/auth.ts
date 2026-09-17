@@ -141,6 +141,14 @@ export function isStaff(role: Role | undefined | null): boolean {
   return role === 'admin' || role === 'manager' || role === 'employee'
 }
 
+/**
+ * Where a signed-in user lands after login.
+ *  admin              -> admin control centre
+ *  manager / employee -> employee operations portal
+ *  customer           -> customer dashboard (their bookings + full public site)
+ */
 export function dashboardHome(role: Role): string {
-  return role === 'admin' ? '/admin' : '/portal'
+  if (role === 'admin') return '/admin'
+  if (role === 'customer') return '/account'
+  return '/portal'
 }

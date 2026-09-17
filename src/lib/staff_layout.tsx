@@ -13,6 +13,8 @@ const ADMIN_NAV: { href: string; label: string; icon: string; module: Module }[]
   { href: '/admin/tasks', label: 'Tasks / Production', icon: 'fa-list-check', module: 'tasks' },
   { href: '/admin/equipment', label: 'Equipment', icon: 'fa-video', module: 'equipment' },
   { href: '/admin/media', label: 'Media', icon: 'fa-photo-film', module: 'media' },
+  { href: '/admin/youtube', label: 'YouTube Videos', icon: 'fa-brands fa-youtube', module: 'media' },
+  { href: '/admin/team', label: 'Team & About', icon: 'fa-users-rectangle', module: 'cms' },
   { href: '/admin/portfolio', label: 'Portfolio / Services', icon: 'fa-briefcase', module: 'portfolio' },
   { href: '/admin/reports', label: 'Reports', icon: 'fa-chart-line', module: 'reports' },
   { href: '/admin/notifications', label: 'Notifications', icon: 'fa-bell', module: 'notifications' },

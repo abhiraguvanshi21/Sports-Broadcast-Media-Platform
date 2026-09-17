@@ -18,6 +18,7 @@ adminRoutes.use('*', async (c, next) => {
     '/roles': 'roles', '/events': 'events', '/live': 'live', '/tasks': 'tasks', '/equipment': 'equipment',
     '/media': 'media', '/portfolio': 'portfolio', '/reports': 'reports', '/notifications': 'notifications',
     '/cms': 'cms', '/logs': 'logs', '/settings': 'settings',
+    '/youtube': 'media', '/team': 'cms',
   }
   const seg = '/' + (path.split('/').filter(Boolean)[0] || '')
   const mod = moduleMap[seg]
@@ -1314,4 +1315,242 @@ adminRoutes.post('/settings', async (c) => {
     }
   }
   return c.redirect('/admin/settings')
+})
+
+// ============================================================
+// YOUTUBE VIDEOS — admin manages what shows on Live / Gallery / Home
+// ============================================================
+adminRoutes.get('/youtube', async (c) => {
+  const user = c.get('user')!
+  const rows = await c.env.DB.prepare(`SELECT * FROM youtube_videos ORDER BY is_live DESC, is_upcoming DESC, sort_order`).all()
+  return c.html(
+    <StaffLayout user={user} nav="admin" current="/admin/youtube" title="YouTube Videos">
+      <Notice type="info">
+        Videos shown here appear on the Live hub, Gallery and Home page. Paste a YouTube URL or video ID — the title and thumbnail are fetched automatically from YouTube.
+      </Notice>
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+          <Table cols={['Video', 'Category', 'State', 'Order', 'Actions']}>
+            {(rows.results as any[]).length === 0 && <tr><td colspan={5}><Empty icon="fa-brands fa-youtube" title="No videos yet" text="Add your first YouTube video." /></td></tr>}
+            {(rows.results as any[]).map((v) => (
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-3">
+                    <img src={`https://i.ytimg.com/vi/${v.video_id}/default.jpg`} class="w-20 h-12 rounded-lg object-cover bg-slate-200" loading="lazy" />
+                    <div class="min-w-0">
+                      <div class="font-medium text-slate-800 text-sm line-clamp-2 max-w-xs">{esc(v.title)}</div>
+                      <div class="text-xs font-mono text-slate-400">{esc(v.video_id)}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-slate-500 text-sm">{esc(v.category || '—')}</td>
+                <td class="px-4 py-3">
+                  <div class="flex flex-col gap-1">
+                    {v.is_live === 1 && <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold w-fit">LIVE</span>}
+                    {v.is_upcoming === 1 && <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold w-fit">Upcoming</span>}
+                    {v.is_live === 0 && v.is_upcoming === 0 && <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold w-fit">Published</span>}
+                    {v.is_active === 0 && <span class="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold w-fit">Hidden</span>}
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-slate-500 text-sm">{v.sort_order}</td>
+                <td class="px-4 py-3">
+                  <div class="flex flex-wrap gap-2">
+                    <form method="post" action={`/admin/youtube/${v.id}/state`}>
+                      <input type="hidden" name="state" value={v.is_live === 1 ? 'published' : 'live'} />
+                      <button class="text-xs font-semibold text-red-600 hover:underline">{v.is_live === 1 ? 'Stop live' : 'Set live'}</button>
+                    </form>
+                    <form method="post" action={`/admin/youtube/${v.id}/state`}>
+                      <input type="hidden" name="state" value={v.is_upcoming === 1 ? 'published' : 'upcoming'} />
+                      <button class="text-xs font-semibold text-blue-600 hover:underline">{v.is_upcoming === 1 ? 'Clear upcoming' : 'Set upcoming'}</button>
+                    </form>
+                    <form method="post" action={`/admin/youtube/${v.id}/toggle`}>
+                      <button class="text-xs font-semibold text-slate-500 hover:underline">{v.is_active ? 'Hide' : 'Show'}</button>
+                    </form>
+                    <form method="post" action={`/admin/youtube/${v.id}/delete`} onsubmit="return confirm('Remove this video?')">
+                      <button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </div>
+        <div class="space-y-6">
+          <Card class="p-5 bg-white">
+            <h2 class="font-bold text-slate-900 mb-4">Add YouTube video</h2>
+            <form method="post" action="/admin/youtube" class="space-y-4">
+              <Field label="YouTube URL or video ID" required hint="e.g. https://youtube.com/watch?v=EP_H_QLpsSs or EP_H_QLpsSs">
+                <input name="video_ref" required placeholder="Paste link or ID" class={inputCls} />
+              </Field>
+              <Field label="Title" hint="Leave blank to auto-fetch from YouTube"><input name="title" class={inputCls} /></Field>
+              <Field label="Category"><input name="category" placeholder="Cricket / Football / Highlights" class={inputCls} /></Field>
+              <Field label="Display order"><input name="sort_order" type="number" value="10" class={inputCls} /></Field>
+              <div class="flex flex-col gap-2 text-sm text-slate-700">
+                <label class="flex items-center gap-2"><input type="checkbox" name="is_live" value="1" class="accent-red-500 w-4 h-4" /> Currently live now</label>
+                <label class="flex items-center gap-2"><input type="checkbox" name="is_upcoming" value="1" class="accent-red-500 w-4 h-4" /> Upcoming stream</label>
+              </div>
+              <button class={btnPrimary + ' w-full'}>Add video</button>
+            </form>
+          </Card>
+          <Card class="p-5 bg-white">
+            <h3 class="font-bold text-slate-900 mb-2 flex items-center gap-2"><i class="fab fa-youtube text-red-600"></i> Channel</h3>
+            <p class="text-sm text-slate-500">Videos are published from the AWADH Sports YouTube channel.</p>
+            <a href="https://youtube.com/@awadh_sports." target="_blank" rel="noopener" class="text-sm text-red-600 font-semibold hover:underline">Open channel →</a>
+          </Card>
+        </div>
+      </div>
+    </StaffLayout>
+  )
+})
+
+/** Extract a YouTube video ID from a full URL or a bare ID. */
+function parseYouTubeId(input: string): string | null {
+  const s = (input || '').trim()
+  if (!s) return null
+  if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s
+  const m =
+    s.match(/[?&]v=([A-Za-z0-9_-]{11})/) ||
+    s.match(/youtu\.be\/([A-Za-z0-9_-]{11})/) ||
+    s.match(/\/embed\/([A-Za-z0-9_-]{11})/) ||
+    s.match(/\/shorts\/([A-Za-z0-9_-]{11})/) ||
+    s.match(/\/live\/([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : null
+}
+
+adminRoutes.post('/youtube', async (c) => {
+  const user = c.get('user')!
+  const f = await c.req.parseBody()
+  const vid = parseYouTubeId(String(f.video_ref || ''))
+  if (!vid) return c.redirect('/admin/youtube?error=invalid')
+  const exists: any = await c.env.DB.prepare(`SELECT id FROM youtube_videos WHERE video_id=?`).bind(vid).first()
+  if (exists) return c.redirect('/admin/youtube?error=duplicate')
+
+  // Auto-fetch title from YouTube when not supplied
+  let title = String(f.title || '').trim()
+  if (!title) {
+    try {
+      const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${vid}&format=json`)
+      if (res.ok) {
+        const j: any = await res.json()
+        title = String(j.title || '').slice(0, 200)
+      }
+    } catch { /* offline — fall back below */ }
+  }
+  if (!title) title = `YouTube video ${vid}`
+
+  await c.env.DB.prepare(
+    `INSERT INTO youtube_videos (video_id, title, category, is_live, is_upcoming, sort_order) VALUES (?,?,?,?,?,?)`
+  ).bind(vid, title, String(f.category || '') || null, f.is_live ? 1 : 0, f.is_upcoming ? 1 : 0, Number(f.sort_order) || 10).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'youtube.added', entity: 'youtube_videos', details: vid })
+  return c.redirect('/admin/youtube')
+})
+
+adminRoutes.post('/youtube/:id/state', async (c) => {
+  const id = Number(c.req.param('id'))
+  const f = await c.req.parseBody()
+  const state = String(f.state)
+  if (state === 'live') {
+    // only one live video at a time
+    await c.env.DB.prepare(`UPDATE youtube_videos SET is_live=0`).run()
+    await c.env.DB.prepare(`UPDATE youtube_videos SET is_live=1, is_upcoming=0 WHERE id=?`).bind(id).run()
+  } else if (state === 'upcoming') {
+    await c.env.DB.prepare(`UPDATE youtube_videos SET is_upcoming=1, is_live=0 WHERE id=?`).bind(id).run()
+  } else {
+    await c.env.DB.prepare(`UPDATE youtube_videos SET is_live=0, is_upcoming=0 WHERE id=?`).bind(id).run()
+  }
+  return c.redirect('/admin/youtube')
+})
+
+adminRoutes.post('/youtube/:id/toggle', async (c) => {
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`UPDATE youtube_videos SET is_active = 1 - is_active WHERE id=?`).bind(id).run()
+  return c.redirect('/admin/youtube')
+})
+
+adminRoutes.post('/youtube/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`DELETE FROM youtube_videos WHERE id=?`).bind(id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'youtube.deleted', entity: 'youtube_videos', entityId: id })
+  return c.redirect('/admin/youtube')
+})
+
+// ============================================================
+// TEAM & ABOUT — admin manages the About-page team members
+// ============================================================
+adminRoutes.get('/team', async (c) => {
+  const user = c.get('user')!
+  const rows = await c.env.DB.prepare(`SELECT * FROM team_members ORDER BY sort_order`).all()
+  return c.html(
+    <StaffLayout user={user} nav="admin" current="/admin/team" title="Team & About">
+      <Notice type="info">These people appear on the public <b>About</b> page — for example Founder, Production Manager and Administrator.</Notice>
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+          <Table cols={['Member', 'Role', 'Contact', 'Order', 'Actions']}>
+            {(rows.results as any[]).length === 0 && <tr><td colspan={5}><Empty icon="fa-users-rectangle" title="No team members yet" /></td></tr>}
+            {(rows.results as any[]).map((t) => (
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-white font-bold flex items-center justify-center text-sm">
+                      {esc(t.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2))}
+                    </span>
+                    <div>
+                      <div class="font-medium text-slate-800">{esc(t.name)}</div>
+                      <div class="text-xs text-slate-400">{t.is_active ? 'Visible' : 'Hidden'}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-slate-600 text-sm">{esc(t.role)}</td>
+                <td class="px-4 py-3 text-slate-500 text-xs">{esc(t.email || '—')}</td>
+                <td class="px-4 py-3 text-slate-500 text-sm">{t.sort_order}</td>
+                <td class="px-4 py-3">
+                  <div class="flex gap-2">
+                    <form method="post" action={`/admin/team/${t.id}/toggle`}><button class="text-xs font-semibold text-slate-500 hover:underline">{t.is_active ? 'Hide' : 'Show'}</button></form>
+                    <form method="post" action={`/admin/team/${t.id}/delete`} onsubmit="return confirm('Remove this team member?')"><button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button></form>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </div>
+        <Card class="p-5 bg-white">
+          <h2 class="font-bold text-slate-900 mb-4">Add team member</h2>
+          <form method="post" action="/admin/team" class="space-y-4">
+            <Field label="Full name" required><input name="name" required class={inputCls} /></Field>
+            <Field label="Role / title" required hint="e.g. Founder, Production Manager, Administrator">
+              <input name="role" required class={inputCls} />
+            </Field>
+            <Field label="Short bio"><textarea name="bio" rows={3} class={inputCls}></textarea></Field>
+            <Field label="Email"><input name="email" type="email" class={inputCls} /></Field>
+            <Field label="Photo URL"><input name="photo_url" class={inputCls} /></Field>
+            <Field label="Display order"><input name="sort_order" type="number" value="10" class={inputCls} /></Field>
+            <button class={btnPrimary + ' w-full'}>Add member</button>
+          </form>
+        </Card>
+      </div>
+    </StaffLayout>
+  )
+})
+
+adminRoutes.post('/team', async (c) => {
+  const user = c.get('user')!
+  const f = await c.req.parseBody()
+  await c.env.DB.prepare(
+    `INSERT INTO team_members (name, role, bio, email, photo_url, sort_order) VALUES (?,?,?,?,?,?)`
+  ).bind(String(f.name || ''), String(f.role || ''), String(f.bio || '') || null, String(f.email || '') || null, String(f.photo_url || '') || null, Number(f.sort_order) || 10).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'team.added', entity: 'team_members', details: String(f.name || '') })
+  return c.redirect('/admin/team')
+})
+
+adminRoutes.post('/team/:id/toggle', async (c) => {
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`UPDATE team_members SET is_active = 1 - is_active WHERE id=?`).bind(id).run()
+  return c.redirect('/admin/team')
+})
+
+adminRoutes.post('/team/:id/delete', async (c) => {
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`DELETE FROM team_members WHERE id=?`).bind(id).run()
+  return c.redirect('/admin/team')
 })

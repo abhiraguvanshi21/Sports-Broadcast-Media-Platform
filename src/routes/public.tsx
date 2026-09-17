@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
-import { PublicLayout, PageHero } from '../lib/public_layout'
+import { PublicLayout, PageHero, BRAND } from '../lib/public_layout'
 import { SectionTitle, Chip } from '../lib/components'
 import { fmtDate, esc } from '../lib/utils'
 
@@ -9,13 +9,14 @@ export const publicRoutes = new Hono<AppEnv>()
 // ---------- HOME ----------
 publicRoutes.get('/', async (c) => {
   const db = c.env.DB
-  const [liveNow, upcoming, latest, services, portfolio, stats] = await Promise.all([
+  const [liveNow, upcoming, latest, services, portfolio, stats, ytRecent] = await Promise.all([
     db.prepare(`SELECT le.*, e.name, e.sport, e.venue_name FROM live_events le JOIN events e ON e.id = le.event_id WHERE le.status='live' ORDER BY le.display_order LIMIT 1`).first(),
     db.prepare(`SELECT e.* FROM events e WHERE e.status='upcoming' ORDER BY e.start_date LIMIT 4`).all(),
     db.prepare(`SELECT m.* FROM media m WHERE m.status='approved' AND m.is_public=1 ORDER BY m.created_at DESC LIMIT 6`).all(),
     db.prepare(`SELECT * FROM services WHERE is_active=1 ORDER BY sort_order LIMIT 8`).all(),
     db.prepare(`SELECT * FROM portfolio WHERE is_published=1 ORDER BY created_at DESC LIMIT 6`).all(),
     db.prepare(`SELECT (SELECT COUNT(*) FROM events) events, (SELECT COUNT(*) FROM events WHERE status='completed') completed, (SELECT COUNT(*) FROM media WHERE is_public=1) media, (SELECT COUNT(*) FROM employees WHERE status='active') staff`).first<any>(),
+    db.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=0 AND is_upcoming=0 ORDER BY sort_order LIMIT 5`).all(),
   ])
 
   return c.html(
@@ -129,6 +130,27 @@ publicRoutes.get('/', async (c) => {
         </div>
       </section>
 
+      {/* LATEST FROM YOUTUBE */}
+      {(ytRecent.results as any[]).length > 0 && (
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+          <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+            <SectionTitle eyebrow="From our channel" title="Latest live broadcasts" subtitle="Recent matches streamed live on the AWADH Sports YouTube channel." light />
+            <a href={BRAND.youtube} target="_blank" rel="noopener" class="text-sm text-red-400 hover:text-red-300 font-semibold"><i class="fab fa-youtube mr-1"></i> Subscribe →</a>
+          </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {(ytRecent.results as any[]).map((v) => (
+              <a href={`https://www.youtube.com/watch?v=${v.video_id}`} target="_blank" rel="noopener" class="rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-red-500/50 transition group">
+                <div class="aspect-video bg-slate-800 relative">
+                  <img src={`https://i.ytimg.com/vi/${v.video_id}/hqdefault.jpg`} class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                  <span class="absolute inset-0 flex items-center justify-center"><span class="w-9 h-9 rounded-full bg-black/55 flex items-center justify-center text-white text-xs"><i class="fas fa-play"></i></span></span>
+                </div>
+                <div class="p-3 text-xs text-white font-medium line-clamp-2">{esc(v.title)}</div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* PORTFOLIO */}
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <SectionTitle eyebrow="Proof of work" title="Recent portfolio" subtitle="Selected projects delivered across sports and events." light center />
@@ -164,8 +186,9 @@ publicRoutes.get('/', async (c) => {
 })
 
 // ---------- ABOUT ----------
-publicRoutes.get('/about', (c) =>
-  c.html(
+publicRoutes.get('/about', async (c) => {
+  const team = await c.env.DB.prepare(`SELECT * FROM team_members WHERE is_active=1 ORDER BY sort_order`).all()
+  return c.html(
     <PublicLayout current="/about" title="About Us">
       <PageHero eyebrow="About" title="Built for the pace of live sport" subtitle="We are a dedicated sports broadcast and media-production team — cameras, commentary, graphics, streaming and social-first highlights under one roof." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 grid lg:grid-cols-2 gap-12">
@@ -194,6 +217,26 @@ publicRoutes.get('/about', (c) =>
           ))}
         </div>
       </section>
+
+      {/* TEAM */}
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+        <SectionTitle eyebrow="Our team" title="The people behind every broadcast" subtitle="Leadership and operations — the crew that makes match day happen." light center />
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10 max-w-5xl mx-auto">
+          {(team.results as any[]).length === 0 && <p class="text-slate-500 text-center col-span-full">Team details coming soon.</p>}
+          {(team.results as any[]).map((t) => (
+            <article class="rounded-3xl bg-white/5 border border-white/10 p-7 text-center hover:border-red-500/50 transition">
+              <div class="w-24 h-24 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white text-3xl font-black shadow-lg overflow-hidden">
+                {t.photo_url ? <img src={t.photo_url} alt={t.name} class="w-full h-full object-cover" /> : esc(t.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2))}
+              </div>
+              <h3 class="font-bold text-white text-lg mt-5">{esc(t.name)}</h3>
+              <div class="text-red-400 text-sm font-semibold mt-1">{esc(t.role)}</div>
+              {t.bio && <p class="text-sm text-slate-400 mt-3 leading-relaxed">{esc(t.bio)}</p>}
+              {t.email && <a href={`mailto:${t.email}`} class="inline-flex items-center gap-1.5 mt-4 text-xs text-slate-400 hover:text-white"><i class="fas fa-envelope"></i> Contact</a>}
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section class="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
         <div class="rounded-3xl bg-white/5 border border-white/10 p-10 grid sm:grid-cols-4 gap-8 text-center">
           {[['500+','Matches covered'],['50+','Leagues & clubs'],['8','Camera capability'],['24/7','Production support']].map(([v,l])=>(
@@ -203,7 +246,7 @@ publicRoutes.get('/about', (c) =>
       </section>
     </PublicLayout>
   )
-)
+})
 
 // ---------- SERVICES ----------
 publicRoutes.get('/services', async (c) => {
@@ -426,17 +469,23 @@ publicRoutes.get('/events/:id', async (c) => {
 
 // ---------- LIVE HUB ----------
 publicRoutes.get('/live', async (c) => {
-  const [liveNow, upcoming, latest, highlights, channels] = await Promise.all([
+  const [liveNow, upcoming, latest, highlights, channels, ytLive, ytUpcoming, ytRecent] = await Promise.all([
     c.env.DB.prepare(`SELECT le.*, e.name, e.sport, e.venue_name, e.id AS eid FROM live_events le JOIN events e ON e.id=le.event_id WHERE le.status='live' ORDER BY le.display_order`).all(),
     c.env.DB.prepare(`SELECT le.*, e.name, e.sport, e.start_date, e.id AS eid FROM live_events le JOIN events e ON e.id=le.event_id WHERE le.status='upcoming' ORDER BY le.scheduled_at LIMIT 6`).all(),
     c.env.DB.prepare(`SELECT m.* FROM media m WHERE m.status='approved' AND m.is_public=1 AND m.media_type IN ('video','highlight','reel','interview') ORDER BY m.created_at DESC LIMIT 8`).all(),
     c.env.DB.prepare(`SELECT m.* FROM media m WHERE m.status='approved' AND m.is_public=1 AND m.media_type='highlight' ORDER BY m.created_at DESC LIMIT 4`).all(),
     c.env.DB.prepare(`SELECT DISTINCT platform FROM live_events WHERE platform IS NOT NULL`).all(),
+    c.env.DB.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=1 ORDER BY sort_order LIMIT 1`).first(),
+    c.env.DB.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_upcoming=1 ORDER BY scheduled_at LIMIT 6`).all(),
+    c.env.DB.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=0 AND is_upcoming=0 ORDER BY sort_order LIMIT 5`).all(),
   ])
   const main = (liveNow.results as any[])[0]
+  const yt = ytLive as any
+  const ytUp = ytUpcoming.results as any[]
+  const ytList = ytRecent.results as any[]
   return c.html(
     <PublicLayout current="/live" title="Live">
-      <PageHero eyebrow="Live Hub" title="Watch us live" subtitle="Current live broadcast, upcoming streams, latest videos and highlights." />
+      <PageHero eyebrow="Live Hub" title="Watch us live" subtitle="Current live broadcast, upcoming streams, and our latest matches from the AWADH Sports YouTube channel." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2">
           {main ? (
@@ -451,38 +500,76 @@ publicRoutes.get('/live', async (c) => {
                   : <div class="w-full h-full flex items-center justify-center text-slate-500">Stream link not configured.</div>}
               </div>
             </div>
+          ) : yt ? (
+            <div class="rounded-2xl overflow-hidden border border-red-500/40 bg-black">
+              <div class="px-4 py-3 bg-gradient-to-r from-red-600 to-orange-500 text-white flex items-center justify-between">
+                <span class="font-bold flex items-center gap-2"><i class="fas fa-circle text-[8px] live-dot"></i> LIVE ON YOUTUBE</span>
+                <span class="text-xs bg-black/20 px-2 py-1 rounded-full">YouTube</span>
+              </div>
+              <div class="aspect-video"><iframe src={`https://www.youtube.com/embed/${esc(yt.video_id)}`} class="w-full h-full" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>
+              <div class="p-4 text-white font-semibold text-sm">{esc(yt.title)}</div>
+            </div>
           ) : (
             <div class="rounded-2xl border border-white/10 bg-white/5 aspect-video flex items-center justify-center text-center">
               <div>
                 <i class="fas fa-tower-broadcast text-4xl text-slate-600"></i>
                 <p class="text-slate-400 mt-3 font-semibold">No live broadcast right now</p>
-                <p class="text-sm text-slate-500">Check the upcoming streams below.</p>
+                <p class="text-sm text-slate-500">Check the latest matches below.</p>
               </div>
             </div>
           )}
 
+          {/* YouTube: latest broadcasts */}
           <div class="mt-8">
-            <h3 class="font-extrabold text-white text-lg mb-4">Latest broadcasts & videos</h3>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-extrabold text-white text-lg flex items-center gap-2"><i class="fab fa-youtube text-red-500"></i> Latest live broadcasts</h3>
+              <a href={BRAND.youtube} target="_blank" rel="noopener" class="text-sm text-red-400 hover:text-red-300 font-semibold">View channel →</a>
+            </div>
             <div class="grid sm:grid-cols-2 gap-4">
-              {(latest.results as any[]).length === 0 && <p class="text-slate-500 text-sm">No videos published yet.</p>}
-              {(latest.results as any[]).map((m) => (
-                <a href={m.url} target="_blank" class="rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/25">
+              {ytList.length === 0 && <p class="text-slate-500 text-sm">No videos yet.</p>}
+              {ytList.map((v) => (
+                <a href={`https://www.youtube.com/watch?v=${v.video_id}`} target="_blank" rel="noopener" class="rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-red-500/50 transition group">
                   <div class="aspect-video bg-slate-800 relative">
-                    {m.thumbnail ? <img src={m.thumbnail} class="w-full h-full object-cover" loading="lazy" /> : <div class="w-full h-full flex items-center justify-center text-slate-600"><i class="fas fa-play-circle text-2xl"></i></div>}
-                    <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 text-white text-xs capitalize">{esc(m.media_type)}</span>
+                    <img src={`https://i.ytimg.com/vi/${v.video_id}/hqdefault.jpg`} class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                    <span class="absolute inset-0 flex items-center justify-center"><span class="w-11 h-11 rounded-full bg-black/55 flex items-center justify-center text-white"><i class="fas fa-play"></i></span></span>
+                    {v.category && <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-white text-xs">{esc(v.category)}</span>}
                   </div>
-                  <div class="p-3 text-sm text-white font-medium truncate">{esc(m.title)}</div>
+                  <div class="p-3 text-sm text-white font-medium line-clamp-2">{esc(v.title)}</div>
                 </a>
               ))}
             </div>
           </div>
+
+          {(latest.results as any[]).length > 0 && (
+            <div class="mt-8">
+              <h3 class="font-extrabold text-white text-lg mb-4">More from our events</h3>
+              <div class="grid sm:grid-cols-2 gap-4">
+                {(latest.results as any[]).map((m) => (
+                  <a href={m.url} target="_blank" class="rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/25">
+                    <div class="aspect-video bg-slate-800 relative">
+                      {m.thumbnail ? <img src={m.thumbnail} class="w-full h-full object-cover" loading="lazy" /> : <div class="w-full h-full flex items-center justify-center text-slate-600"><i class="fas fa-play-circle text-2xl"></i></div>}
+                      <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 text-white text-xs capitalize">{esc(m.media_type)}</span>
+                    </div>
+                    <div class="p-3 text-sm text-white font-medium truncate">{esc(m.title)}</div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <aside class="space-y-6">
           <div class="rounded-2xl bg-white/5 border border-white/10 p-6">
             <h3 class="font-bold text-white mb-4 flex items-center gap-2"><i class="fas fa-clock text-red-500"></i> Upcoming streams</h3>
-            {(upcoming.results as any[]).length === 0 ? <p class="text-sm text-slate-500">Nothing scheduled.</p> : (
+            {ytUp.length === 0 && (upcoming.results as any[]).length === 0 ? <p class="text-sm text-slate-500">Nothing scheduled right now.</p> : (
               <ul class="space-y-4">
+                {ytUp.map((u) => (
+                  <li class="pb-4 border-b border-white/5 last:border-0 last:pb-0">
+                    <a href={`https://www.youtube.com/watch?v=${u.video_id}`} target="_blank" rel="noopener" class="font-semibold text-white hover:text-red-400 text-sm line-clamp-2">{esc(u.title)}</a>
+                    <div class="text-xs text-red-400 font-semibold mt-1 uppercase tracking-wide">Upcoming</div>
+                    {u.scheduled_at && <div class="countdown text-xs text-slate-400 font-mono mt-1" data-date={u.scheduled_at}></div>}
+                  </li>
+                ))}
                 {(upcoming.results as any[]).map((u) => (
                   <li class="pb-4 border-b border-white/5 last:border-0 last:pb-0">
                     <a href={`/events/${u.eid}`} class="font-semibold text-white hover:text-red-400 text-sm">{esc(u.name)}</a>
@@ -505,6 +592,11 @@ publicRoutes.get('/live', async (c) => {
               ))}
             </div>
           </div>
+          <a href={BRAND.youtube} target="_blank" rel="noopener" class="block rounded-2xl bg-red-600 hover:bg-red-700 transition p-6 text-center">
+            <i class="fab fa-youtube text-3xl text-white"></i>
+            <p class="text-white font-bold mt-2">Subscribe on YouTube</p>
+            <p class="text-white/80 text-sm">@awadh_sports</p>
+          </a>
         </aside>
       </section>
     </PublicLayout>
@@ -517,12 +609,40 @@ publicRoutes.get('/gallery', async (c) => {
   const q = type
     ? c.env.DB.prepare(`SELECT * FROM media WHERE status='approved' AND is_public=1 AND media_type=? ORDER BY created_at DESC`).bind(type)
     : c.env.DB.prepare(`SELECT * FROM media WHERE status='approved' AND is_public=1 ORDER BY created_at DESC`)
-  const rows = await q.all()
+  const [rows, yt] = await Promise.all([
+    q.all(),
+    c.env.DB.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 ORDER BY is_live DESC, is_upcoming DESC, sort_order LIMIT 12`).all(),
+  ])
   const types = ['photo', 'video', 'highlight', 'reel', 'interview']
   return c.html(
     <PublicLayout current="/gallery" title="Media Gallery">
-      <PageHero eyebrow="Gallery" title="Photos, videos & highlights" subtitle="Approved and published media from our events." />
+      <PageHero eyebrow="Gallery" title="Photos, videos & highlights" subtitle="Approved and published media from our events, plus our latest live broadcasts on YouTube." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        {/* YouTube videos from the AWADH Sports channel */}
+        {(yt.results as any[]).length > 0 && (
+          <div class="mb-12">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <h2 class="font-extrabold text-white text-lg flex items-center gap-2"><i class="fab fa-youtube text-red-500"></i> Live broadcasts on YouTube</h2>
+              <a href={BRAND.youtube} target="_blank" rel="noopener" class="text-sm text-red-400 hover:text-red-300 font-semibold">View channel →</a>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {(yt.results as any[]).map((v) => (
+                <a href={`https://www.youtube.com/watch?v=${v.video_id}`} target="_blank" rel="noopener" class="rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-red-500/50 transition group">
+                  <div class="aspect-video bg-slate-800 relative">
+                    <img src={`https://i.ytimg.com/vi/${v.video_id}/hqdefault.jpg`} class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                    <span class="absolute inset-0 flex items-center justify-center"><span class="w-10 h-10 rounded-full bg-black/55 flex items-center justify-center text-white"><i class="fas fa-play"></i></span></span>
+                    {(v.is_live === 1 || v.is_upcoming === 1) && (
+                      <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold uppercase">{v.is_live ? 'Live' : 'Upcoming'}</span>
+                    )}
+                  </div>
+                  <div class="p-3 text-sm text-white font-medium line-clamp-2">{esc(v.title)}</div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <h2 class="font-extrabold text-white text-lg mb-5">Event gallery</h2>
         <div class="flex flex-wrap gap-2 mb-8">
           <a href="/gallery" class={`px-4 py-2 rounded-xl text-sm font-semibold border ${!type ? 'bg-white text-slate-900 border-white' : 'border-white/20 text-slate-300 hover:bg-white/5'}`}>All</a>
           {types.map((t) => (
@@ -569,15 +689,17 @@ publicRoutes.get('/contact', (c) =>
         </div>
         <div class="space-y-5">
           {[
-            { i: 'fa-location-dot', t: 'Office', d: 'Sports Media House, Stadium Road, India' },
-            { i: 'fa-phone', t: 'Phone', d: '+91 90000 00000' },
-            { i: 'fa-envelope', t: 'Email', d: 'hello@awadhsportslive.example' },
+            { i: 'fa-location-dot', t: 'Office', d: BRAND.address },
+            { i: 'fa-phone', t: 'Phone', d: BRAND.phone, href: `tel:${BRAND.phoneRaw}` },
+            { i: 'fa-envelope', t: 'Email', d: BRAND.email, href: `mailto:${BRAND.email}` },
+            { i: 'fa-brands fa-youtube', t: 'YouTube', d: '@awadh_sports', href: BRAND.youtube },
             { i: 'fa-clock', t: 'Working hours', d: 'Mon–Sat · 9:00 AM – 8:00 PM' },
           ].map((x) => (
-            <div class="flex items-start gap-4 p-5 rounded-2xl bg-white/5 border border-white/10">
-              <span class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center"><i class={`fas ${x.i}`}></i></span>
-              <div><div class="font-semibold text-white">{x.t}</div><div class="text-sm text-slate-400">{x.d}</div></div>
-            </div>
+            <a href={x.href || undefined} target={x.href?.startsWith('http') ? '_blank' : undefined} rel="noopener"
+               class={`flex items-start gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 ${x.href ? 'hover:border-red-500/50 hover:bg-white/[0.07] transition' : ''}`}>
+              <span class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center"><i class={`${x.i.includes('fa-brands') ? 'fab' : 'fas'} ${x.i.replace('fa-brands ', '')}`}></i></span>
+              <div><div class="font-semibold text-white">{x.t}</div><div class="text-sm text-slate-400 break-all">{x.d}</div></div>
+            </a>
           ))}
           <div class="rounded-2xl bg-gradient-to-r from-red-600 to-orange-500 p-6">
             <p class="text-white font-bold">Prefer a formal request?</p>

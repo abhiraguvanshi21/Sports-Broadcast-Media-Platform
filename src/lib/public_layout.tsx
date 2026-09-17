@@ -4,9 +4,11 @@ export const BRAND = {
   name: 'AWADH Sports Live',
   short: 'AWADH',
   tagline: 'Every sport. Every moment. Live.',
-  phone: '+91 90000 00000',
-  email: 'hello@awadhsportslive.example',
-  address: 'Awadh Sports Media House, Stadium Road, India',
+  phone: '+91 79854 28973',
+  phoneRaw: '7985428973',
+  email: 'info.awadhsports@gmail.com',
+  address: 'Sector 142, Noida, Uttar Pradesh, India',
+  youtube: 'https://youtube.com/@awadh_sports.',
 }
 
 export const PublicHead: FC<{ title?: string; description?: string }> = ({ title, description }) => (
@@ -51,7 +53,6 @@ const MORE = [
   { href: '/gallery', label: 'Media Gallery', icon: 'fa-photo-film' },
   { href: '/track', label: 'Track Booking', icon: 'fa-magnifying-glass' },
   { href: '/careers', label: 'Careers', icon: 'fa-briefcase' },
-  { href: '/contact', label: 'Contact', icon: 'fa-envelope' },
 ]
 
 export const PublicHeader: FC<{ current?: string }> = ({ current }) => {
@@ -128,7 +129,7 @@ export const PublicFooter: FC = () => (
           Complete sports media solutions — match production, live streaming, commentary, graphics, photography and highlights for leagues, tournaments and clubs.
         </p>
         <div class="flex gap-3 mt-4 text-lg">
-          <a href="#" class="hover:text-white" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+          <a href={BRAND.youtube} target="_blank" rel="noopener" class="hover:text-red-500 transition" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
           <a href="#" class="hover:text-white" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
           <a href="#" class="hover:text-white" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
           <a href="#" class="hover:text-white" aria-label="X"><i class="fab fa-x-twitter"></i></a>
@@ -142,7 +143,7 @@ export const PublicFooter: FC = () => (
           <li><a href="/services#sports-commentary" class="hover:text-white">Sports Commentary</a></li>
           <li><a href="/services#live-scores-graphics" class="hover:text-white">Live Scores &amp; Graphics</a></li>
           <li><a href="/services#sports-photography" class="hover:text-white">Sports Photography</a></li>
-          <li><a href="/services" class="hover:text-white text-red-400">View all services →</a></li>
+          <li><a href="/services" class="hover:text-red-400">View all services →</a></li>
         </ul>
       </div>
       <div>
@@ -159,16 +160,31 @@ export const PublicFooter: FC = () => (
         <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">Get in touch</h4>
         <ul class="space-y-3 text-sm">
           <li><i class="fas fa-location-dot mr-2 text-red-500"></i>{BRAND.address}</li>
-          <li><i class="fas fa-phone mr-2 text-red-500"></i>{BRAND.phone}</li>
-          <li><i class="fas fa-envelope mr-2 text-red-500"></i>{BRAND.email}</li>
+          <li><a href={`tel:${BRAND.phoneRaw}`} class="hover:text-white"><i class="fas fa-phone mr-2 text-red-500"></i>{BRAND.phone}</a></li>
+          <li><a href={`mailto:${BRAND.email}`} class="hover:text-white break-all"><i class="fas fa-envelope mr-2 text-red-500"></i>{BRAND.email}</a></li>
         </ul>
         <a href="/book" class="btn-primary inline-flex mt-4 text-sm">Request a Quote</a>
       </div>
     </div>
     <div class="border-t border-white/10 py-5 text-center text-xs">
-      © {new Date().getFullYear()} {BRAND.name}. All rights reserved. · <a href="/login" class="hover:text-white">Staff &amp; Admin Portal</a>
+      © {new Date().getFullYear()} {BRAND.name}. All rights reserved. · <a href="/login" class="hover:text-white">Login</a>
     </div>
   </footer>
+)
+
+/**
+ * Floating Contact button — bottom-right corner, animated (pulse ring + hover label).
+ * Replaces the old navbar "Contact" link.
+ */
+export const ContactFab: FC = () => (
+  <div class="contact-fab" id="contact-fab">
+    <span class="contact-fab__ring" aria-hidden="true"></span>
+    <span class="contact-fab__ring contact-fab__ring--2" aria-hidden="true"></span>
+    <a href="/contact" class="contact-fab__btn" aria-label="Contact us">
+      <i class="fas fa-comments"></i>
+      <span class="contact-fab__label">Contact Us</span>
+    </a>
+  </div>
 )
 
 export const PublicLayout: FC<{ children?: any; current?: string; title?: string; description?: string }> = ({
@@ -183,6 +199,7 @@ export const PublicLayout: FC<{ children?: any; current?: string; title?: string
       <PublicHeader current={current} />
       <main>{children}</main>
       <PublicFooter />
+      <ContactFab />
       <script src="/static/app.js"></script>
     </body>
   </html>

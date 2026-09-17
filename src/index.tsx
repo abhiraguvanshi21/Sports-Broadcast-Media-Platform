@@ -6,6 +6,7 @@ import { bookingRoutes } from './routes/booking'
 import { authRoutes } from './routes/auth'
 import { portalRoutes } from './routes/portal'
 import { adminRoutes } from './routes/admin'
+import { accountRoutes } from './routes/account'
 import { apiRoutes } from './routes/api'
 
 const app = new Hono<AppEnv>()
@@ -32,6 +33,7 @@ app.use('/static/*', async (c) => {
 app.route('/', publicRoutes)
 app.route('/', bookingRoutes)
 app.route('/', authRoutes)
+app.route('/account', accountRoutes)
 app.route('/portal', portalRoutes)
 app.route('/admin', adminRoutes)
 app.route('/api', apiRoutes)

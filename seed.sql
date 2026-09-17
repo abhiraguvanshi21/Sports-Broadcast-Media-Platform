@@ -126,3 +126,28 @@ INSERT OR IGNORE INTO website_content (section, content_key, content_value) VALU
 -- Activity log seed
 INSERT OR IGNORE INTO activity_logs (user_id, actor_name, action, entity, details) VALUES
  (1,'Arjun Mehta','system.seed','system','Demo data loaded');
+
+-- ============================================================
+-- YouTube: latest live broadcasts from @awadh_sports
+-- ============================================================
+INSERT OR IGNORE INTO youtube_videos (video_id, title, category, is_live, is_upcoming, published_at, sort_order) VALUES
+ ('EP_H_QLpsSs','Quarter Final 🔥 Budh Singh ClubPali vs Bambawar | Babu Ram Bhati Memorial Cricket Tournament Season 2','Cricket',0,0,'2026-09-17',1),
+ ('JCxzJr4aGVk','Quarter Final 🔥 Nawada Tigers vs Bodaki Cricket','Cricket',0,0,'2026-09-17',2),
+ ('IetZ28mC9fc','JSB Kulipura Tigers 🆚 Khanpur 2 | LIVE CRICKET | Round Two','Cricket',0,0,'2026-09-17',3),
+ ('pfjQigvSO3U','🔴 LIVE | Jawli Warriors XI vs Datawali Cricket Club | Round Two','Cricket',0,0,'2026-09-16',4),
+ ('K_fIuOLCZlU','🔴 LIVE | Kalda Cricket Team vs Bambawar | Round Two | 20 Over Match','Cricket',0,0,'2026-09-16',5);
+
+-- ============================================================
+-- Team members (About page)
+-- ============================================================
+INSERT OR IGNORE INTO team_members (id, name, role, bio, email, sort_order, is_active) VALUES
+ (1,'Arjun Mehta','Founder','Founded AWADH Sports Live to bring professional broadcast quality to grassroots and league sport. Leads vision, partnerships and production standards.','info.awadhsports@gmail.com',1,1),
+ (2,'Rahul Verma','Production Manager','Runs match-day operations — crew rosters, camera plans, live direction and streaming delivery across every event.','info.awadhsports@gmail.com',2,1),
+ (3,'Neha Kapoor','Administrator','Manages bookings, client communication, scheduling and the operations platform that keeps every production on track.','info.awadhsports@gmail.com',3,1);
+
+-- ============================================================
+-- Customer login account (password: Customer@123) — links to customer #1
+-- ============================================================
+INSERT OR IGNORE INTO users (id, email, password_hash, role, full_name, phone)
+VALUES (10,'customer@awadhsports.example','pbkdf2$100000$U/krOBdIMLcWvZsuIH47oA==$PDk5TaJvEP/9s5WIAK1mcCdoSZEVImLGL8EBfjquhuA=','customer','Rohit Sharma','+91 98111 22233');
+UPDATE customers SET user_id = 10 WHERE id = 1 AND user_id IS NULL;
