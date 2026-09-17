@@ -96,8 +96,11 @@ export const PublicHeader: FC<{ current?: string }> = ({ current }) => {
 
         <div class="flex items-center gap-2">
           <a href="/book" class="hidden sm:inline-flex btn-primary text-sm">Book Now</a>
-          <a href="/login" class="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm" title="Staff & Admin">
-            <i class="fas fa-user-shield"></i>
+          <a href="/register" class="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm font-medium">
+            <i class="fas fa-user-plus"></i> Sign Up
+          </a>
+          <a href="/login" class="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm font-medium">
+            <i class="fas fa-right-to-bracket"></i> Sign In
           </a>
           <button id="nav-toggle" class="lg:hidden text-white w-10 h-10 rounded-lg hover:bg-white/10" aria-label="Menu">
             <i class="fas fa-bars"></i>
@@ -113,7 +116,8 @@ export const PublicHeader: FC<{ current?: string }> = ({ current }) => {
         </div>
         <div class="mt-3 grid grid-cols-2 gap-2">
           <a href="/book" class="btn-primary text-center text-sm">Book Now</a>
-          <a href="/login" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm">Staff Login</a>
+          <a href="/register" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm">Sign Up</a>
+          <a href="/login" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm col-span-2">Sign In</a>
         </div>
       </div>
     </header>
