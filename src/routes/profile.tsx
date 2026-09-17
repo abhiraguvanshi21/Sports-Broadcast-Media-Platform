@@ -167,7 +167,7 @@ profileRoutes.get('/', async (c) => {
 
   if (user.role === 'customer') {
     return c.html(
-      <PublicLayout current="/profile" title="My Profile">
+      <PublicLayout user={user} current="/profile" title="My Profile">
         <PageHero eyebrow="My account" title="My Profile" subtitle="Your account details — used for bookings, quotations and updates." />
         <section class="max-w-6xl mx-auto px-4 sm:px-6 py-12">
           <ProfileForm p={p} role={user.role} saved={saved} pwError={pwError} pwOk={pwOk} />

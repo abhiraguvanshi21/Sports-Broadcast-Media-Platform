@@ -191,7 +191,7 @@ export const PublicHeader: FC<{ current?: string; user?: SessionUser | null }> =
   )
 }
 
-export const PublicFooter: FC = () => (
+export const PublicFooter: FC<{ user?: SessionUser | null }> = ({ user }) => (
   <footer class="bg-slate-950 text-slate-400 border-t border-white/10 mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14 grid gap-10 md:grid-cols-4">
       <div class="md:col-span-1">
@@ -238,7 +238,12 @@ export const PublicFooter: FC = () => (
       </div>
     </div>
     <div class="border-t border-white/10 py-5 text-center text-xs">
-      © {new Date().getFullYear()} {BRAND.name}. All rights reserved. · <a href="/login" class="hover:text-white">Login</a>
+      © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
+      {user ? (
+        <> · <a href="/profile" class="hover:text-white">My Profile</a></>
+      ) : (
+        <> · <a href="/login" class="hover:text-white">Sign In</a> · <a href="/register" class="hover:text-white">Sign Up</a></>
+      )}
     </div>
   </footer>
 )
@@ -270,7 +275,7 @@ export const PublicLayout: FC<{ children?: any; current?: string; title?: string
     <body class="bg-slate-950 text-slate-100 antialiased">
       <PublicHeader current={current} user={user} />
       <main>{children}</main>
-      <PublicFooter />
+      <PublicFooter user={user} />
       <ContactFab />
       <script src="/static/app.js"></script>
     </body>

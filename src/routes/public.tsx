@@ -9,14 +9,15 @@ export const publicRoutes = new Hono<AppEnv>()
 // ---------- HOME ----------
 publicRoutes.get('/', async (c) => {
   const db = c.env.DB
-  const [liveNow, upcoming, latest, services, portfolio, stats, ytRecent] = await Promise.all([
+  const [liveNow, upcoming, latest, services, portfolio, stats, ytRecent, playlists] = await Promise.all([
     db.prepare(`SELECT le.*, e.name, e.sport, e.venue_name FROM live_events le JOIN events e ON e.id = le.event_id WHERE le.status='live' ORDER BY le.display_order LIMIT 1`).first(),
     db.prepare(`SELECT e.* FROM events e WHERE e.status='upcoming' ORDER BY e.start_date LIMIT 4`).all(),
     db.prepare(`SELECT m.* FROM media m WHERE m.status='approved' AND m.is_public=1 ORDER BY m.created_at DESC LIMIT 6`).all(),
     db.prepare(`SELECT * FROM services WHERE is_active=1 ORDER BY sort_order LIMIT 8`).all(),
     db.prepare(`SELECT * FROM portfolio WHERE is_published=1 ORDER BY created_at DESC LIMIT 6`).all(),
     db.prepare(`SELECT (SELECT COUNT(*) FROM events) events, (SELECT COUNT(*) FROM events WHERE status='completed') completed, (SELECT COUNT(*) FROM media WHERE is_public=1) media, (SELECT COUNT(*) FROM employees WHERE status='active') staff`).first<any>(),
-    db.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=0 AND is_upcoming=0 ORDER BY sort_order LIMIT 5`).all(),
+    db.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=0 AND is_upcoming=0 ORDER BY sort_order LIMIT 8`).all(),
+    db.prepare(`SELECT * FROM youtube_playlists WHERE is_active=1 ORDER BY is_featured DESC, sort_order LIMIT 6`).all(),
   ])
 
   return c.html(
@@ -151,22 +152,29 @@ publicRoutes.get('/', async (c) => {
         </section>
       )}
 
-      {/* PORTFOLIO */}
+      {/* PORTFOLIO — real tournaments & leagues we produced */}
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <SectionTitle eyebrow="Proof of work" title="Recent portfolio" subtitle="Selected projects delivered across sports and events." light center />
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
-          {(portfolio.results as any[]).map((p) => (
-            <a href="/portfolio" class="group rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/25 transition">
-              <div class="aspect-video bg-slate-800 relative overflow-hidden">
-                {p.cover_image ? <img src={p.cover_image} class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy" /> : <div class="w-full h-full flex items-center justify-center text-slate-600"><i class="fas fa-image text-3xl"></i></div>}
-                {p.sport && <span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/60 text-white text-xs font-semibold">{esc(p.sport)}</span>}
-              </div>
-              <div class="p-5">
-                <h3 class="font-bold text-white">{esc(p.title)}</h3>
-                <p class="text-sm text-slate-400 mt-1 line-clamp-2">{esc(p.description)}</p>
-              </div>
-            </a>
-          ))}
+        <SectionTitle eyebrow="Proof of work" title="Tournaments & leagues we've produced" subtitle="Every playlist below is a competition we covered end to end — production, streaming, commentary and highlights." light center />
+        {(playlists.results as any[]).length > 0 && (
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
+            {(playlists.results as any[]).slice(0, 6).map((p) => (
+              <a href={`https://www.youtube.com/playlist?list=${p.playlist_id}`} target="_blank" rel="noopener" class="group rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-red-500/50 transition">
+                <div class="aspect-video bg-slate-800 relative overflow-hidden">
+                  <img src={`https://i.ytimg.com/vi/${p.cover_video}/hqdefault.jpg`} class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                  <span class="absolute inset-0 flex items-center justify-center"><span class="w-11 h-11 rounded-full bg-black/60 flex items-center justify-center text-white group-hover:bg-red-600 transition"><i class="fas fa-play"></i></span></span>
+                  <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/75 text-white text-[11px] font-semibold">{p.video_count}+ videos</span>
+                </div>
+                <div class="p-5">
+                  <div class="flex flex-wrap gap-2 mb-2">{p.category && <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-xs font-semibold">{esc(p.category)}</span>}{p.client && <span class="px-2 py-0.5 rounded bg-white/10 text-slate-300 text-xs">{esc(p.client)}</span>}</div>
+                  <h3 class="font-bold text-white">{esc(p.title)}</h3>
+                  <p class="text-sm text-slate-400 mt-1 line-clamp-2">{esc(p.description)}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+        <div class="text-center mt-8">
+          <a href="/portfolio" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/20 text-white font-semibold hover:bg-white/5">See all projects <i class="fas fa-arrow-right text-xs"></i></a>
         </div>
       </section>
 
@@ -295,12 +303,49 @@ publicRoutes.get('/portfolio', async (c) => {
   const q = sport
     ? c.env.DB.prepare(`SELECT * FROM portfolio WHERE is_published=1 AND sport=? ORDER BY created_at DESC`).bind(sport)
     : c.env.DB.prepare(`SELECT * FROM portfolio WHERE is_published=1 ORDER BY created_at DESC`)
-  const rows = await q.all()
-  const sports = await c.env.DB.prepare(`SELECT DISTINCT sport FROM portfolio WHERE sport IS NOT NULL`).all()
+  const [rows, sports, playlists] = await Promise.all([
+    q.all(),
+    c.env.DB.prepare(`SELECT DISTINCT sport FROM portfolio WHERE sport IS NOT NULL`).all(),
+    c.env.DB.prepare(`SELECT * FROM youtube_playlists WHERE is_active=1 ORDER BY is_featured DESC, sort_order LIMIT 24`).all(),
+  ])
+  const pls = playlists.results as any[]
   return c.html(
     <PublicLayout user={c.get('user')} current="/portfolio" title="Portfolio">
-      <PageHero eyebrow="Portfolio" title="Projects we've delivered" subtitle="Grouped by sport and event type, with the services delivered for each." />
+      <PageHero eyebrow="Proof of work" title="Tournaments & leagues we've produced" subtitle="Real seasons, real matches — every playlist below is a competition we covered end to end with live production, streaming, commentary and highlights." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        {/* Real YouTube work — tournaments & leagues produced */}
+        {pls.length > 0 && (
+          <div class="mb-14">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <h2 class="text-xl font-extrabold text-white flex items-center gap-2"><i class="fab fa-youtube text-red-500"></i> Tournaments &amp; leagues we covered</h2>
+              <a href={BRAND.youtube} target="_blank" rel="noopener" class="text-sm text-red-400 hover:text-red-300 font-semibold">Visit our channel →</a>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {pls.map((p) => (
+                <a href={`https://www.youtube.com/playlist?list=${p.playlist_id}`} target="_blank" rel="noopener" class="group rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-red-500/50 transition">
+                  <div class="aspect-video bg-slate-800 relative overflow-hidden">
+                    <img src={`https://i.ytimg.com/vi/${p.cover_video}/hqdefault.jpg`} class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy" />
+                    <span class="absolute inset-0 flex items-center justify-center"><span class="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center text-white text-lg group-hover:bg-red-600 transition"><i class="fas fa-play"></i></span></span>
+                    <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/75 text-white text-[11px] font-semibold">{p.video_count}+ videos</span>
+                    {p.is_featured === 1 && <span class="absolute top-2 left-2 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold uppercase">Featured</span>}
+                  </div>
+                  <div class="p-5">
+                    <div class="flex flex-wrap gap-2 mb-2">
+                      {p.category && <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-xs font-semibold">{esc(p.category)}</span>}
+                      {p.client && <span class="px-2 py-0.5 rounded bg-white/10 text-slate-300 text-xs">{esc(p.client)}</span>}
+                    </div>
+                    <h3 class="font-bold text-white">{esc(p.title)}</h3>
+                    <p class="text-sm text-slate-400 mt-2 line-clamp-2">{esc(p.description)}</p>
+                    {p.services && <p class="text-xs text-slate-500 mt-3 line-clamp-2"><i class="fas fa-check-circle text-red-500 mr-1"></i>{esc(p.services)}</p>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <h2 class="text-xl font-extrabold text-white mb-1">Selected projects</h2>
+        <p class="text-slate-400 text-sm mb-6">Grouped by sport and event type, with the services delivered for each.</p>
         <div class="flex flex-wrap gap-2 mb-8">
           <a href="/portfolio" class={`px-4 py-2 rounded-xl text-sm font-semibold border ${!sport ? 'bg-white text-slate-900 border-white' : 'border-white/20 text-slate-300 hover:bg-white/5'}`}>All</a>
           {(sports.results as any[]).map((s) => (
@@ -319,6 +364,7 @@ publicRoutes.get('/portfolio', async (c) => {
                 <h3 class="font-bold text-white">{esc(p.title)}</h3>
                 <p class="text-sm text-slate-400 mt-2">{esc(p.description)}</p>
                 {p.services_delivered && <p class="text-xs text-slate-500 mt-3"><i class="fas fa-check-circle text-red-500 mr-1"></i>{esc(p.services_delivered)}</p>}
+                {p.external_url && <a href={p.external_url} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-red-400 hover:text-red-300"><i class="fab fa-youtube"></i> Watch the season</a>}
               </div>
             </article>
           ))}

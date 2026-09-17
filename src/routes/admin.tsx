@@ -384,8 +384,19 @@ adminRoutes.get('/employees', async (c) => {
   const leaves = await c.env.DB.prepare(
     `SELECT l.*, u.full_name FROM leave_requests l JOIN employees e ON e.id=l.employee_id JOIN users u ON u.id=e.user_id WHERE l.status='pending' ORDER BY l.created_at DESC`
   ).all()
+  const createdEmail = c.req.query('created')
+  const createdPass = c.req.query('pw')
   return c.html(
     <StaffLayout user={user} nav="admin" current="/admin/employees" title="Employees">
+      {createdEmail && (
+        <Notice type="success">
+          <div>
+            <b>Employee created — they can sign in right now.</b>
+            <div class="mt-1 text-sm">Email: <code class="font-mono bg-emerald-100 px-1.5 py-0.5 rounded">{esc(createdEmail)}</code> · Password: <code class="font-mono bg-emerald-100 px-1.5 py-0.5 rounded">{esc(createdPass || '')}</code></div>
+            <div class="text-xs mt-1">Share these with the employee. They log in at <a href="/login" class="underline font-semibold">/login</a> and land on their own dashboard (attendance, tasks, events).</div>
+          </div>
+        </Notice>
+      )}
       <div class="grid lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
           <Card class="p-5">
@@ -446,17 +457,21 @@ adminRoutes.get('/employees', async (c) => {
 adminRoutes.post('/employees', async (c) => {
   const user = c.get('user')!
   const f = await c.req.parseBody()
-  const email = String(f.email).trim().toLowerCase()
+  const email = String(f.email || '').trim().toLowerCase()
+  const password = String(f.password || '')
+  const name = String(f.full_name || '').trim()
+  if (!email || !password || !name) return c.redirect('/admin/employees?err=missing')
+  if (password.length < 6) return c.redirect('/admin/employees?err=weak')
   const exists: any = await c.env.DB.prepare(`SELECT id FROM users WHERE email=?`).bind(email).first()
-  if (exists) return c.redirect('/admin/employees')
-  const hash = await hashPassword(String(f.password))
-  const res = await c.env.DB.prepare(`INSERT INTO users (email, password_hash, role, full_name, phone) VALUES (?,?,?,?,?)`)
-    .bind(email, hash, String(f.role || 'employee'), String(f.full_name), String(f.phone || '') || null).run()
+  if (exists) return c.redirect('/admin/employees?err=exists')
+  const hash = await hashPassword(password)
+  const res = await c.env.DB.prepare(`INSERT INTO users (email, password_hash, role, full_name, phone, is_active) VALUES (?,?,?,?,?,1)`)
+    .bind(email, hash, String(f.role || 'employee'), name, String(f.phone || '') || null).run()
   const uid = Number(res.meta.last_row_id)
-  await c.env.DB.prepare(`INSERT INTO employees (user_id, emp_code, department, designation) VALUES (?,?,?,?)`)
+  await c.env.DB.prepare(`INSERT INTO employees (user_id, emp_code, department, designation, joining_date, status) VALUES (?,?,?,?,date('now'),'active')`)
     .bind(uid, String(f.emp_code || '') || null, String(f.department || '') || null, String(f.designation || '') || null).run()
   await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'employee.created', entity: 'users', entityId: uid, details: email })
-  return c.redirect('/admin/employees')
+  return c.redirect(`/admin/employees?created=${encodeURIComponent(email)}&pw=${encodeURIComponent(password)}`)
 })
 
 adminRoutes.post('/employees/:id/toggle', async (c) => {

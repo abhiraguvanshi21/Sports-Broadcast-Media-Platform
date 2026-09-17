@@ -17,7 +17,8 @@ It is not just a showcase website: it combines a **public sports-media website**
 - **Contact entry**: a floating animated button in the bottom-right corner (not in the navbar).
 
 ## Integrated content
-- **YouTube channel videos** — the last live broadcasts from the AWADH Sports channel are shown on the **Home**, **Live** and **Gallery** pages; the Live hub also supports a currently-live video and an **Upcoming** list. Managed by admin at `/admin/youtube`.
+- **YouTube channel videos** — the latest broadcasts from the AWADH Sports channel are shown on the **Home**, **Live** and **Gallery** pages; the Live hub also supports a currently-live video and an **Upcoming** list. Managed by admin at `/admin/youtube`.
+- **Tournaments & leagues as Portfolio** — the AWADH Sports **YouTube playlists** are used as real proof of work. Each playlist is a competition we produced end-to-end (RPL Delhi NCR, Game Changer League, Neori Premier League, ISCA 2024, ACKO Premier League, Bira 91 Premier League, MPL 3.0, DHCBA, St. Basil, Rockwell, and more). They appear on **`/portfolio`** and on the **Home** page, each linking to its YouTube playlist. Stored in the `youtube_playlists` table; "Featured" ones surface first.
 - **About-page team** — Founder, Production Manager and Administrator are listed on `/about`; managed by admin at `/admin/team`.
 
 ## What We Do — 8 Services
@@ -84,14 +85,17 @@ Validation: required fields, email format, password ≥ 6 chars, passwords match
 **2. Sign In — `/login`**
 Every active role signs in here and is routed automatically to their own workspace.
 
-| Role | Demo account | Password | Lands on |
+| Role | Account | Password | Lands on |
 |---|---|---|---|
-| Admin | `admin@primecast.example` | `Admin@123` | `/admin` control centre |
+| **Owner Admin (yours)** | **`admin@awadhsports.com`** | **`Awadh@2026`** | `/admin` control centre |
+| Demo Admin | `admin@primecast.example` | `Admin@123` | `/admin` control centre |
 | Production Manager | `manager@primecast.example` | `Password@123` | `/portal` employee dashboard |
 | Employee | `employee@primecast.example` | `Password@123` | `/portal` employee dashboard |
 | Customer | `customer@awadhsports.example` | `Admin@123` | `/` the public home page |
 
-> The seeded demo logins still use the legacy `@primecast.example` domain; the public-facing brand is **AWADH Sports Live**. New staff accounts are created by an admin (Employees module) with the email + password of your choice.
+> **Your own admin control account** is `admin@awadhsports.com` / `Awadh@2026` — sign in with this to add employees, manage bookings, tasks, attendance and all website content. Change the password any time from **`/profile`**. The remaining `@primecast.example` accounts are demo data only.
+
+**Log in / log out behaviour:** the navbar shows **Sign Up / Sign In** only to visitors who are not signed in. As soon as anyone (customer, employee or admin) is logged in, those buttons are **removed everywhere** (navbar, mobile nav and footer) and replaced by their **user menu · My Profile · Logout**.
 
 ### One profile for every user
 Whichever role signs in, a full **profile** is created and reachable at **`/profile`** (also in the navbar user menu and the staff sidebar): avatar, name, email, role badge, last login, editable contact details and a **change-password** form.
