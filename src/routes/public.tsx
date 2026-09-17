@@ -31,14 +31,14 @@ publicRoutes.get('/', async (c) => {
               </a>
             ) : (
               <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-slate-300 text-sm font-semibold mb-5">
-                <i class="fas fa-satellite-dish text-red-500"></i> Broadcast & Production Partner
+                <img src="/static/logo-icon.png" alt="" class="w-5 h-5 rounded-md object-cover" /> Every sport. Every moment. <span class="text-red-500">Live.</span>
               </span>
             )}
             <h1 class="text-4xl sm:text-6xl font-black tracking-tight leading-[1.05]">
               Where every match <span class="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">goes live</span>.
             </h1>
             <p class="text-slate-400 mt-5 text-lg max-w-xl">
-              End-to-end sports broadcasting: multi-camera production, live streaming, replays, graphics, commentary, photography and highlights — for leagues, tournaments and clubs.
+              Complete sports media solutions — multi-camera match production, digital streaming, commentary, live graphics, photography, video and highlights — for leagues, tournaments and clubs.
             </p>
             <div class="flex flex-wrap gap-3 mt-8">
               <a href="/book" class="btn-primary px-6 py-3 text-base">Request a Quote <i class="fas fa-arrow-right"></i></a>
@@ -76,18 +76,19 @@ publicRoutes.get('/', async (c) => {
 
       {/* SERVICES */}
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <SectionTitle eyebrow="What we do" title="Complete sports media services" subtitle="One team for the entire broadcast pipeline — from camera setup to final highlights." light center />
+        <SectionTitle eyebrow="What we do" title="Complete Sports Media Services" subtitle="Professional media solutions for leagues, tournaments and sporting events." light center />
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10">
           {(services.results as any[]).map((s) => (
             <a href={`/services#${s.slug}`} class="group p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-red-500/50 hover:bg-white/[0.07] transition">
               <span class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center text-lg mb-4">
                 <i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i>
               </span>
-              <h3 class="font-bold text-white">{s.title}</h3>
-              <p class="text-sm text-slate-400 mt-2">{s.short_desc}</p>
+              <h3 class="font-bold text-white">{esc(s.title)}</h3>
+              <p class="text-sm text-slate-400 mt-2">{esc(s.short_desc)}</p>
             </a>
           ))}
         </div>
+        <div class="text-center mt-10"><a href="/services" class="px-6 py-3 rounded-xl border border-white/20 text-white font-semibold hover:bg-white/5 inline-flex items-center gap-2">Explore all services <i class="fas fa-arrow-right text-xs"></i></a></div>
       </section>
 
       {/* LIVE + UPCOMING */}
@@ -171,7 +172,7 @@ publicRoutes.get('/about', (c) =>
         <div>
           <SectionTitle eyebrow="Our story" title="From single-camera set-ups to full broadcast weekends" />
           <div class="mt-5 space-y-4 text-slate-400">
-            <p>PrimeCast started as a small crew covering local tournaments and grew into a full production house handling multi-camera broadcasts, live graphics, replays and commentary for leagues and clubs.</p>
+            <p>AWADH Sports Live started as a small crew covering local tournaments and grew into a full production house handling multi-camera broadcasts, live graphics, replays and commentary for leagues and clubs.</p>
             <p>Our philosophy is simple: reliability first. Broadcast happens once — so planning, redundancy and clear communication matter more than any single shot.</p>
             <p>Today we combine production craft with a modern operations platform: bookings, crew scheduling, equipment tracking and live control all in one system.</p>
           </div>
@@ -209,19 +210,37 @@ publicRoutes.get('/services', async (c) => {
   const services = await c.env.DB.prepare(`SELECT * FROM services WHERE is_active=1 ORDER BY sort_order`).all()
   return c.html(
     <PublicLayout current="/services" title="Services">
-      <PageHero eyebrow="Services" title="Everything a broadcast needs" subtitle="Pick individual services or let us run the complete production end to end." />
-      <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 space-y-6">
-        {(services.results as any[]).map((s, i) => (
-          <div id={s.slug} class={`grid md:grid-cols-[auto,1fr] gap-6 items-start p-7 rounded-3xl border border-white/10 ${i % 2 ? 'bg-white/[0.03]' : 'bg-white/[0.06]'}`}>
-            <span class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center text-2xl"><i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i></span>
-            <div>
-              <h3 class="text-xl font-bold text-white">{esc(s.title)}</h3>
-              <p class="text-slate-400 mt-2">{esc(s.description || s.short_desc)}</p>
-              <a href={`/book?service=${s.id}`} class="inline-flex items-center gap-2 mt-4 text-red-400 hover:text-red-300 font-semibold text-sm">Request this service <i class="fas fa-arrow-right text-xs"></i></a>
-            </div>
+      <PageHero eyebrow="What we do" title="Complete Sports Media Services" subtitle="Professional media solutions for leagues, tournaments and sporting events." />
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {(services.results as any[]).map((s, i) => (
+            <article id={s.slug} class="group relative flex flex-col p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-red-500/50 hover:bg-white/[0.07] transition">
+              <span class="absolute top-5 right-5 text-4xl font-black text-white/[0.06] group-hover:text-red-500/15 transition">{String(i + 1).padStart(2, '0')}</span>
+              <span class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg">
+                <i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i>
+              </span>
+              <h3 class="text-lg font-bold text-white">{esc(s.title)}</h3>
+              <p class="text-sm text-slate-400 mt-2 flex-1">{esc(s.short_desc)}</p>
+              <a href={`/book?service=${s.id}`} class="inline-flex items-center gap-2 mt-4 text-red-400 hover:text-red-300 font-semibold text-sm">
+                Request this service <i class="fas fa-arrow-right text-xs"></i>
+              </a>
+            </article>
+          ))}
+        </div>
+        <div class="mt-10 rounded-2xl bg-white/[0.04] border border-white/10 p-6 sm:p-8 grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h3 class="font-bold text-white text-lg">Production vs streaming — what's the difference?</h3>
+            <p class="text-sm text-slate-400 mt-2">
+              <b class="text-slate-200">Match Production</b> creates the professional live feed — cameras, direction and switching.
+              <b class="text-slate-200">Digital Streaming</b> then delivers that feed to your online audience. Both are needed for a complete broadcast; the other services cover separate deliverables.
+            </p>
           </div>
-        ))}
-        <div class="text-center pt-6"><a href="/book" class="btn-primary px-6 py-3">Request a Custom Quote</a></div>
+          <div class="flex md:justify-end gap-3">
+            <a href={`/book?service=1`} class="btn-primary px-5 py-3 text-sm">Book Match Production</a>
+            <a href={`/book?service=2`} class="px-5 py-3 rounded-xl border border-white/20 text-slate-200 font-semibold hover:bg-white/5 text-sm">Book Streaming</a>
+          </div>
+        </div>
+        <div class="text-center pt-8"><a href="/book" class="btn-primary px-6 py-3">Request a Custom Quote</a></div>
       </section>
     </PublicLayout>
   )
@@ -552,7 +571,7 @@ publicRoutes.get('/contact', (c) =>
           {[
             { i: 'fa-location-dot', t: 'Office', d: 'Sports Media House, Stadium Road, India' },
             { i: 'fa-phone', t: 'Phone', d: '+91 90000 00000' },
-            { i: 'fa-envelope', t: 'Email', d: 'hello@primecast.example' },
+            { i: 'fa-envelope', t: 'Email', d: 'hello@awadhsportslive.example' },
             { i: 'fa-clock', t: 'Working hours', d: 'Mon–Sat · 9:00 AM – 8:00 PM' },
           ].map((x) => (
             <div class="flex items-start gap-4 p-5 rounded-2xl bg-white/5 border border-white/10">

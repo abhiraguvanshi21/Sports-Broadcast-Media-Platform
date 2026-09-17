@@ -1,21 +1,21 @@
 -- ============================================================
--- PrimeCast Sports Media — Demo Seed Data
+-- AWADH Sports Live — Demo Seed Data
 -- ============================================================
 
 -- Admin user (password: Admin@123)
 INSERT OR IGNORE INTO users (id, email, password_hash, role, full_name, phone)
 VALUES (1, 'admin@primecast.example', 'pbkdf2$100000$U/krOBdIMLcWvZsuIH47oA==$PDk5TaJvEP/9s5WIAK1mcCdoSZEVImLGL8EBfjquhuA=', 'admin', 'Arjun Mehta', '+91 90000 00001');
 
--- Services
+-- Services (8 clearly differentiated services)
 INSERT OR IGNORE INTO services (id, slug, title, short_desc, description, icon, is_active, sort_order) VALUES
- (1,'live-broadcast','Live Broadcast','Multi-camera live match production','Full live broadcast production with multi-camera coverage, switching, replays and on-air graphics for leagues and tournaments.','fa-tower-broadcast',1,1),
- (2,'streaming','Streaming','Multi-platform live streaming','Professional live streaming to YouTube, Facebook and custom players with reliable encoding, redundancy and monitoring.','fa-signal',1,2),
- (3,'multicam','Multi-Camera Production','Up to 8-camera set-ups','End-to-end multi-camera production: camera placement, cabling, vision mixing, comms and technical direction.','fa-camera-retro',1,3),
- (4,'replay-graphics','Replay & Graphics','Slo-mo replays and score graphics','Instant replays, super slow-motion, score bugs, lower thirds, player stats and sponsor graphics.','fa-clapperboard',1,4),
- (5,'commentary','Commentary','Bilingual commentary teams','Professional commentary and analysis in English and regional languages, with commentary box set-up.','fa-microphone-lines',1,5),
- (6,'photography','Photography & Videography','Match & event coverage','Action photography and videography for matches, award ceremonies, team photos and social media.','fa-camera',1,6),
- (7,'highlights','Highlights','Social-ready highlight edits','Fast-turnaround highlight packages and reels edited for social media and broadcast.','fa-film',1,7),
- (8,'custom','Custom Solutions','Tailored media packages','Full-service custom media production packages built around your tournament requirements.','fa-wand-magic-sparkles',1,8);
+ (1,'match-production','Match Production','Multi-camera match coverage, live direction, camera switching and production control.','Multi-camera match coverage, live direction, camera switching and production control. Our crew sets up the cameras, runs the vision mixer and directs the match as it happens — creating the professional live feed.','fa-clapperboard',1,1),
+ (2,'digital-streaming','Digital Streaming','Deliver live matches to audiences through YouTube, Facebook and other digital platforms.','Deliver live matches to audiences through YouTube, Facebook and other digital platforms. We take the production feed and broadcast it reliably to your online viewers with encoding, monitoring and backup.','fa-signal',1,2),
+ (3,'sports-commentary','Sports Commentary','Professional Hindi, English and bilingual commentary to bring every match to life.','Professional Hindi, English and bilingual commentary to bring every match to life. Experienced commentators and analysts with commentary-box setup and match research.','fa-microphone-lines',1,3),
+ (4,'live-scores-graphics','Live Scores & Graphics','Real-time scoreboards, player statistics, team line-ups, match results and on-screen graphics.','Real-time scoreboards, player statistics, team line-ups, match results and on-screen graphics. Lower thirds, sponsor bugs, player cards and match summary graphics built and operated live.','fa-table-columns',1,4),
+ (5,'sports-photography','Sports Photography','Professional action shots, player portraits, team photographs and event coverage.','Professional action shots, player portraits, team photographs and event coverage. High-resolution images ready for press, sponsors and social media.','fa-camera',1,5),
+ (6,'video-production','Video Production','Player interviews, promotional videos, sponsor films, event videos and behind-the-scenes content.','Player interviews, promotional videos, sponsor films, event videos and behind-the-scenes content. Scripted and edited packages that tell your tournament''s story.','fa-video',1,6),
+ (7,'highlights-social-content','Highlights & Social Content','Match highlights, best moments, reels, short-form edits and social media-ready content.','Match highlights, best moments, reels, short-form edits and social media-ready content. Fast-turnaround vertical and horizontal edits built to travel.','fa-film',1,7),
+ (8,'tournament-media-branding','Tournament Media & Branding','Sponsor visibility, tournament promotions, branded content and complete media support.','Sponsor visibility, tournament promotions, branded content and complete media support. End-to-end media planning so your sponsors get value and your tournament gets attention.','fa-bullhorn',1,8);
 
 -- Customers
 INSERT OR IGNORE INTO customers (id, name, email, phone, organization) VALUES
@@ -35,10 +35,10 @@ INSERT OR IGNORE INTO booking_services (booking_id, service_id) VALUES
  (3,1),(3,4),(3,6);
 
 INSERT OR IGNORE INTO booking_messages (booking_id, sender_type, sender_name, message, is_visible) VALUES
- (1,'staff','PrimeCast','Thank you Rohit, your request has been received. Our team will review it and respond shortly.',1),
+ (1,'staff','AWADH Sports Live','Thank you Rohit, your request has been received. Our team will review it and respond shortly.',1),
  (1,'staff','Arjun Mehta','We can cover RPL Season 2 with an 8-camera set-up. Can you confirm the number of match days?',1),
- (2,'staff','PrimeCast','Thank you Priya, your request has been received. Our team will review it and respond shortly.',1),
- (3,'staff','PrimeCast','Thank you Vikram, your request has been received. Our team will review it and respond shortly.',1);
+ (2,'staff','AWADH Sports Live','Thank you Priya, your request has been received. Our team will review it and respond shortly.',1),
+ (3,'staff','AWADH Sports Live','Thank you Vikram, your request has been received. Our team will review it and respond shortly.',1);
 
 INSERT OR IGNORE INTO quotations (booking_id, amount, currency, details, status, valid_until) VALUES
  (2, 72500, 'INR', 'Streaming + bilingual commentary for 12 matches. Includes 2 cameras per match, highlights reel and social clips.', 'sent', '2026-10-01');
@@ -116,7 +116,7 @@ INSERT OR IGNORE INTO job_openings (id, title, department, location, job_type, d
 
 -- Website content
 INSERT OR IGNORE INTO website_content (section, content_key, content_value) VALUES
- ('settings','company_name','PrimeCast Sports Media'),
+ ('settings','company_name','AWADH Sports Live'),
  ('settings','support_email','hello@primecast.example'),
  ('settings','support_phone','+91 90000 00000'),
  ('settings','address','Sports Media House, Stadium Road, India'),

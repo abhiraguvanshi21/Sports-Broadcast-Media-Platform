@@ -50,7 +50,7 @@ export const StaffLayout: FC<{
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{title} · PrimeCast</title>
+        <title>{title} · AWADH Sports Live</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet" />
         <link href="/static/styles.css" rel="stylesheet" />
@@ -59,11 +59,12 @@ export const StaffLayout: FC<{
         <div class="flex min-h-screen">
           {/* Sidebar */}
           <aside id="sidebar" class="fixed lg:sticky top-0 z-40 h-screen w-64 shrink-0 bg-slate-950 text-slate-300 flex flex-col -translate-x-full lg:translate-x-0 transition-transform">
-            <div class="h-16 flex items-center gap-2 px-5 border-b border-white/10">
-              <span class="inline-flex w-8 h-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-orange-500">
-                <i class="fas fa-satellite-dish text-white text-sm"></i>
+            <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/10">
+              <img src="/static/logo-icon.png" alt="AWADH Sports Live" class="w-9 h-9 rounded-lg object-cover ring-1 ring-white/15" />
+              <span class="leading-none font-extrabold text-white">
+                AWADH
+                <span class="block text-[9px] font-bold tracking-[0.22em] text-red-500 mt-0.5">SPORTS LIVE</span>
               </span>
-              <span class="text-white font-extrabold">Prime<span class="text-red-500">Cast</span></span>
             </div>
             <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
               {allowed.map((i) => (

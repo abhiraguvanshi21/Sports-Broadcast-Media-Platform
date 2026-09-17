@@ -8,14 +8,14 @@ export const authRoutes = new Hono<AppEnv>()
 
 const LOGIN_HTML = (error?: string) => `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Staff Login · PrimeCast</title>
+<title>Staff Login · AWADH Sports Live</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"></head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
   <div class="w-full max-w-md">
-    <a href="/" class="flex items-center justify-center gap-2 mb-8 text-white font-extrabold text-xl">
-      <span class="inline-flex w-10 h-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-orange-500"><i class="fas fa-satellite-dish"></i></span>
-      Prime<span class="-ml-1 text-red-500">Cast</span>
+    <a href="/" class="flex items-center justify-center gap-3 mb-8 text-white font-extrabold text-xl">
+      <img src="/static/logo-icon.png" alt="AWADH Sports Live" class="w-11 h-11 rounded-xl object-cover ring-1 ring-white/15" />
+      <span class="leading-tight text-left">AWADH<span class="block text-[11px] font-bold tracking-[0.25em] text-red-500">SPORTS LIVE</span></span>
     </a>
     <div class="bg-white/5 border border-white/10 rounded-3xl p-8">
       <h1 class="text-xl font-bold text-white">Staff & Admin Portal</h1>

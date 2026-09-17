@@ -280,7 +280,7 @@ adminRoutes.post('/bookings/:id/quotation', async (c) => {
   await c.env.DB.prepare(`INSERT INTO quotations (booking_id, amount, details, valid_until) VALUES (?,?,?,?)`)
     .bind(id, Number(f.amount) || 0, String(f.details || ''), String(f.valid_until || '') || null).run()
   await c.env.DB.prepare(`UPDATE bookings SET status='quotation_sent', updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(id).run()
-  await c.env.DB.prepare(`INSERT INTO booking_messages (booking_id, sender_type, sender_name, message) VALUES (?, 'staff', 'PrimeCast', ?)`)
+  await c.env.DB.prepare(`INSERT INTO booking_messages (booking_id, sender_type, sender_name, message) VALUES (?, 'staff', 'AWADH Sports Live', ?)`)
     .bind(id, `A quotation of ₹${Number(f.amount) || 0} has been shared. Please review and let us know.`).run()
   await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'quotation.sent', entity: 'bookings', entityId: id, details: String(f.amount) })
   return c.redirect(`/admin/bookings/${id}`)

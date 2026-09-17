@@ -57,7 +57,7 @@ apiRoutes.post('/bookings', async (c) => {
   }
 
   // Welcome message (customer visible)
-  await db.prepare(`INSERT INTO booking_messages (booking_id, sender_type, sender_name, message) VALUES (?, 'staff', 'PrimeCast', ?)`)
+  await db.prepare(`INSERT INTO booking_messages (booking_id, sender_type, sender_name, message) VALUES (?, 'staff', 'AWADH Sports Live', ?)`)
     .bind(bookingId, `Thank you ${name}, your request has been received. Our team will review it and respond shortly.`)
     .run()
 

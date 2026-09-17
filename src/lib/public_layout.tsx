@@ -1,11 +1,22 @@
 import type { FC } from 'hono/jsx'
 
+export const BRAND = {
+  name: 'AWADH Sports Live',
+  short: 'AWADH',
+  tagline: 'Every sport. Every moment. Live.',
+  phone: '+91 90000 00000',
+  email: 'hello@awadhsportslive.example',
+  address: 'Awadh Sports Media House, Stadium Road, India',
+}
+
 export const PublicHead: FC<{ title?: string; description?: string }> = ({ title, description }) => (
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title ? `${title} · PrimeCast Sports Media` : 'PrimeCast Sports Media — Live Broadcast & Production'}</title>
-    <meta name="description" content={description || 'Professional sports broadcasting, live telecast, streaming, multi-camera production and media services.'} />
+    <title>{title ? `${title} · ${BRAND.name}` : `${BRAND.name} — Live Sports Broadcast & Production`}</title>
+    <meta name="description" content={description || 'Professional sports media: match production, live streaming, commentary, graphics, photography, video and highlights.'} />
+    <link rel="icon" type="image/png" href="/static/favicon.png" />
+    <link rel="apple-touch-icon" href="/static/logo-icon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet" />
     <link href="/static/styles.css" rel="stylesheet" />
@@ -13,116 +24,149 @@ export const PublicHead: FC<{ title?: string; description?: string }> = ({ title
   </head>
 )
 
+export const BrandMark: FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
+  const px = size === 'sm' ? 'w-8 h-8' : size === 'lg' ? 'w-12 h-12' : 'w-10 h-10'
+  const txt = size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-lg'
+  return (
+    <span class="flex items-center gap-2.5">
+      <img src="/static/logo-icon.png" alt={BRAND.name} class={`${px} rounded-xl object-cover ring-1 ring-white/15`} />
+      <span class={`leading-none font-extrabold tracking-tight text-white ${txt}`}>
+        AWADH
+        <span class="block text-[0.6em] font-bold tracking-[0.28em] text-red-500 mt-0.5">SPORTS LIVE</span>
+      </span>
+    </span>
+  )
+}
+
+// Compact primary nav; secondary links live under "More"
 const NAV = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
-  { href: '/services', label: 'Services' },
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/events', label: 'Events' },
   { href: '/live', label: 'Live', accent: true },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/careers', label: 'Careers' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/events', label: 'Events' },
+  { href: '/services', label: 'Services' },
+]
+const MORE = [
+  { href: '/portfolio', label: 'Portfolio', icon: 'fa-briefcase' },
+  { href: '/gallery', label: 'Media Gallery', icon: 'fa-photo-film' },
+  { href: '/track', label: 'Track Booking', icon: 'fa-magnifying-glass' },
+  { href: '/careers', label: 'Careers', icon: 'fa-briefcase' },
+  { href: '/contact', label: 'Contact', icon: 'fa-envelope' },
 ]
 
-export const PublicHeader: FC<{ current?: string }> = ({ current }) => (
-  <header class="site-header sticky top-0 z-50 backdrop-blur bg-slate-950/90 border-b border-white/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-      <a href="/" class="flex items-center gap-2 text-white font-extrabold text-lg tracking-tight">
-        <span class="inline-flex w-9 h-9 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-orange-500 shadow-lg">
-          <i class="fas fa-satellite-dish text-white"></i>
-        </span>
-        <span>Prime<span class="text-red-500">Cast</span></span>
-      </a>
-      <nav class="hidden lg:flex items-center gap-1 text-sm">
-        {NAV.map((n) => (
-          <a
-            href={n.href}
-            class={`px-3 py-2 rounded-lg transition ${
-              current === n.href ? 'text-white bg-white/10' : 'text-slate-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            {n.accent && <i class="fas fa-circle text-red-500 text-[7px] mr-1.5 align-middle live-dot"></i>}
-            {n.label}
+export const PublicHeader: FC<{ current?: string }> = ({ current }) => {
+  const isMore = MORE.some((m) => m.href === current)
+  return (
+    <header class="site-header sticky top-0 z-50 backdrop-blur bg-slate-950/85 border-b border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+        <a href="/" aria-label={BRAND.name}><BrandMark /></a>
+
+        <nav class="hidden lg:flex items-center gap-0.5 text-sm">
+          {NAV.map((n) => (
+            <a
+              href={n.href}
+              class={`px-3.5 py-2 rounded-lg transition font-medium ${
+                current === n.href ? 'text-white bg-white/10' : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {n.accent && <i class="fas fa-circle text-red-500 text-[7px] mr-1.5 align-middle live-dot"></i>}
+              {n.label}
+            </a>
+          ))}
+          <div class="relative group">
+            <button
+              class={`px-3.5 py-2 rounded-lg transition font-medium inline-flex items-center gap-1.5 ${
+                isMore ? 'text-white bg-white/10' : 'text-slate-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              More <i class="fas fa-chevron-down text-[10px] opacity-70 group-hover:rotate-180 transition"></i>
+            </button>
+            <div class="absolute right-0 top-full pt-2 w-52 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition">
+              <div class="rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur shadow-2xl p-1.5">
+                {MORE.map((m) => (
+                  <a href={m.href} class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 text-sm">
+                    <i class={`fas ${m.icon} w-4 text-center text-slate-500`}></i> {m.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div class="flex items-center gap-2">
+          <a href="/book" class="hidden sm:inline-flex btn-primary text-sm">Book Now</a>
+          <a href="/login" class="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm" title="Staff & Admin">
+            <i class="fas fa-user-shield"></i>
           </a>
-        ))}
-      </nav>
-      <div class="flex items-center gap-2">
-        <a href="/book" class="hidden sm:inline-flex btn-primary text-sm">Book Now</a>
-        <a href="/login" class="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm">
-          <i class="fas fa-user-shield"></i> Staff
-        </a>
-        <button id="nav-toggle" class="lg:hidden text-white w-10 h-10 rounded-lg hover:bg-white/10" aria-label="Menu">
-          <i class="fas fa-bars"></i>
-        </button>
+          <button id="nav-toggle" class="lg:hidden text-white w-10 h-10 rounded-lg hover:bg-white/10" aria-label="Menu">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
       </div>
-    </div>
-    <div id="mobile-nav" class="lg:hidden hidden border-t border-white/10 bg-slate-950 px-4 py-3">
-      <div class="grid grid-cols-2 gap-1">
-        {NAV.map((n) => (
-          <a href={n.href} class="px-3 py-2 rounded-lg text-slate-300 hover:bg-white/5 text-sm">{n.label}</a>
-        ))}
+
+      <div id="mobile-nav" class="lg:hidden hidden border-t border-white/10 bg-slate-950 px-4 py-3">
+        <div class="grid grid-cols-2 gap-1">
+          {[...NAV, ...MORE].map((n) => (
+            <a href={n.href} class="px-3 py-2.5 rounded-lg text-slate-300 hover:bg-white/5 text-sm">{n.label}</a>
+          ))}
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <a href="/book" class="btn-primary text-center text-sm">Book Now</a>
+          <a href="/login" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm">Staff Login</a>
+        </div>
       </div>
-      <div class="mt-3 grid grid-cols-2 gap-2">
-        <a href="/book" class="btn-primary text-center text-sm">Book Now</a>
-        <a href="/login" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm">Staff Login</a>
-      </div>
-    </div>
-  </header>
-)
+    </header>
+  )
+}
 
 export const PublicFooter: FC = () => (
   <footer class="bg-slate-950 text-slate-400 border-t border-white/10 mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14 grid gap-10 md:grid-cols-4">
-      <div>
-        <div class="flex items-center gap-2 text-white font-extrabold text-lg mb-3">
-          <span class="inline-flex w-9 h-9 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-orange-500">
-            <i class="fas fa-satellite-dish text-white"></i>
-          </span>
-          Prime<span class="-ml-1 text-red-500">Cast</span>
-        </div>
-        <p class="text-sm leading-relaxed">
-          Professional sports broadcasting, live telecast, multi-camera production, replays, graphics and media services for leagues, tournaments and clubs.
+      <div class="md:col-span-1">
+        <BrandMark />
+        <p class="text-sm leading-relaxed mt-4">
+          Complete sports media solutions — match production, live streaming, commentary, graphics, photography and highlights for leagues, tournaments and clubs.
         </p>
         <div class="flex gap-3 mt-4 text-lg">
-          <a href="#" class="hover:text-white"><i class="fab fa-youtube"></i></a>
-          <a href="#" class="hover:text-white"><i class="fab fa-instagram"></i></a>
-          <a href="#" class="hover:text-white"><i class="fab fa-facebook"></i></a>
-          <a href="#" class="hover:text-white"><i class="fab fa-x-twitter"></i></a>
+          <a href="#" class="hover:text-white" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+          <a href="#" class="hover:text-white" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="#" class="hover:text-white" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+          <a href="#" class="hover:text-white" aria-label="X"><i class="fab fa-x-twitter"></i></a>
         </div>
       </div>
       <div>
-        <h4 class="text-white font-semibold mb-3">Services</h4>
+        <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">What we do</h4>
         <ul class="space-y-2 text-sm">
-          <li><a href="/services#broadcast" class="hover:text-white">Live Broadcast</a></li>
-          <li><a href="/services#streaming" class="hover:text-white">Streaming</a></li>
-          <li><a href="/services#multicam" class="hover:text-white">Multi-Camera Production</a></li>
-          <li><a href="/services#graphics" class="hover:text-white">Graphics & Replay</a></li>
-          <li><a href="/services#photo" class="hover:text-white">Photography & Videography</a></li>
+          <li><a href="/services#match-production" class="hover:text-white">Match Production</a></li>
+          <li><a href="/services#digital-streaming" class="hover:text-white">Digital Streaming</a></li>
+          <li><a href="/services#sports-commentary" class="hover:text-white">Sports Commentary</a></li>
+          <li><a href="/services#live-scores-graphics" class="hover:text-white">Live Scores &amp; Graphics</a></li>
+          <li><a href="/services#sports-photography" class="hover:text-white">Sports Photography</a></li>
+          <li><a href="/services" class="hover:text-white text-red-400">View all services →</a></li>
         </ul>
       </div>
       <div>
-        <h4 class="text-white font-semibold mb-3">Company</h4>
+        <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">Company</h4>
         <ul class="space-y-2 text-sm">
           <li><a href="/about" class="hover:text-white">About Us</a></li>
           <li><a href="/portfolio" class="hover:text-white">Portfolio</a></li>
           <li><a href="/events" class="hover:text-white">Events</a></li>
+          <li><a href="/gallery" class="hover:text-white">Media Gallery</a></li>
           <li><a href="/careers" class="hover:text-white">Careers</a></li>
-          <li><a href="/track" class="hover:text-white">Track Booking</a></li>
         </ul>
       </div>
       <div>
-        <h4 class="text-white font-semibold mb-3">Get in touch</h4>
+        <h4 class="text-white font-semibold mb-3 text-sm uppercase tracking-wide">Get in touch</h4>
         <ul class="space-y-3 text-sm">
-          <li><i class="fas fa-location-dot mr-2 text-red-500"></i> Sports Media House, Stadium Road</li>
-          <li><i class="fas fa-phone mr-2 text-red-500"></i> +91 90000 00000</li>
-          <li><i class="fas fa-envelope mr-2 text-red-500"></i> hello@primecast.example</li>
+          <li><i class="fas fa-location-dot mr-2 text-red-500"></i>{BRAND.address}</li>
+          <li><i class="fas fa-phone mr-2 text-red-500"></i>{BRAND.phone}</li>
+          <li><i class="fas fa-envelope mr-2 text-red-500"></i>{BRAND.email}</li>
         </ul>
         <a href="/book" class="btn-primary inline-flex mt-4 text-sm">Request a Quote</a>
       </div>
     </div>
     <div class="border-t border-white/10 py-5 text-center text-xs">
-      © {new Date().getFullYear()} PrimeCast Sports Media. All rights reserved. · <a href="/login" class="hover:text-white">Staff & Admin Portal</a>
+      © {new Date().getFullYear()} {BRAND.name}. All rights reserved. · <a href="/login" class="hover:text-white">Staff &amp; Admin Portal</a>
     </div>
   </footer>
 )
@@ -146,11 +190,11 @@ export const PublicLayout: FC<{ children?: any; current?: string; title?: string
 
 export const PageHero: FC<{ eyebrow?: string; title: string; subtitle?: string }> = ({ eyebrow, title, subtitle }) => (
   <section class="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-slate-900 to-slate-950">
-    <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(circle at 20% 20%, #ef4444 0, transparent 40%),radial-gradient(circle at 80% 0%, #f97316 0, transparent 35%)"></div>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-16">
+    <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(circle at 20% 20%, #ef4444 0, transparent 40%),radial-gradient(circle at 80% 0%, #3b82f6 0, transparent 35%)"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-14">
       {eyebrow && <div class="text-red-500 font-semibold tracking-widest text-xs uppercase mb-3">{eyebrow}</div>}
-      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight">{title}</h1>
-      {subtitle && <p class="text-slate-400 mt-4 max-w-2xl">{subtitle}</p>}
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">{title}</h1>
+      {subtitle && <p class="text-slate-400 mt-3 max-w-2xl">{subtitle}</p>}
     </div>
   </section>
 )
