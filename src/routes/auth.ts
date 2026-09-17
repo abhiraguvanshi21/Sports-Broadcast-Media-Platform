@@ -63,25 +63,6 @@ const LOGIN_HTML = (error?: string, info?: string) =>
       <p class="text-center text-sm text-slate-400 mt-5">
         New here? <a href="/register" class="text-red-400 hover:text-red-300 font-semibold">Create an account</a>
       </p>
-    </div>
-
-    <div class="mt-6 rounded-2xl bg-white/[0.04] border border-white/10 p-5">
-      <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-3">Three ways to use AWADH Sports Live</p>
-      <div class="space-y-2.5 text-sm">
-        <div class="flex items-start gap-3">
-          <span class="w-8 h-8 shrink-0 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center"><i class="fas fa-user"></i></span>
-          <div><b class="text-slate-200">Customer</b><div class="text-xs text-slate-400">Browse the full website, book services and track your enquiries &amp; quotations.</div></div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="w-8 h-8 shrink-0 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center"><i class="fas fa-id-badge"></i></span>
-          <div><b class="text-slate-200">Employee</b><div class="text-xs text-slate-400">Mark your attendance, see assigned tasks and your upcoming events.</div></div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="w-8 h-8 shrink-0 rounded-lg bg-red-500/20 text-red-300 flex items-center justify-center"><i class="fas fa-user-shield"></i></span>
-          <div><b class="text-slate-200">Admin</b><div class="text-xs text-slate-400">Full control — bookings, tasks, attendance, services, live events and website content.</div></div>
-        </div>
-      </div>
-      <p class="text-xs text-slate-500 mt-4">Employee accounts are created by the admin. Customers can sign up below.</p>
     </div>`
   )
 

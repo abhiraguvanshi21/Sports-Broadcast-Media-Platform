@@ -18,7 +18,7 @@ adminRoutes.use('*', async (c, next) => {
     '/roles': 'roles', '/events': 'events', '/live': 'live', '/tasks': 'tasks', '/equipment': 'equipment',
     '/media': 'media', '/portfolio': 'portfolio', '/reports': 'reports', '/notifications': 'notifications',
     '/cms': 'cms', '/logs': 'logs', '/settings': 'settings',
-    '/youtube': 'media', '/team': 'cms',
+    '/youtube': 'media', '/team': 'cms', '/users': 'employees', '/attendance': 'attendance',
   }
   const seg = '/' + (path.split('/').filter(Boolean)[0] || '')
   const mod = moduleMap[seg]
@@ -33,7 +33,7 @@ adminRoutes.use('*', async (c, next) => {
 // ============================================================
 adminRoutes.get('/', async (c) => {
   const user = c.get('user')!
-  const [bookings, liveEvents, upcoming, employees, pendingMsgs, recentBookings, activity, issues] = await Promise.all([
+  const [bookings, liveEvents, upcoming, employees, pendingMsgs, recentBookings, activity, issues, custUsers, empUsers, admUsers, loginsToday, logins7] = await Promise.all([
     c.env.DB.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN status IN ('received','under_review','discussion') THEN 1 ELSE 0 END) pending FROM bookings`).first<any>(),
     c.env.DB.prepare(`SELECT COUNT(*) n FROM live_events WHERE status='live'`).first<any>(),
     c.env.DB.prepare(`SELECT COUNT(*) n FROM events WHERE status='upcoming'`).first<any>(),
@@ -42,14 +42,37 @@ adminRoutes.get('/', async (c) => {
     c.env.DB.prepare(`SELECT b.*, (SELECT COUNT(*) FROM booking_messages m WHERE m.booking_id=b.id) msg_count FROM bookings b ORDER BY b.created_at DESC LIMIT 6`).all(),
     c.env.DB.prepare(`SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT 8`).all(),
     c.env.DB.prepare(`SELECT COUNT(*) n FROM issue_reports WHERE status='open'`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE role='customer' AND is_active=1`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE role IN ('employee','manager') AND is_active=1`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE role='admin' AND is_active=1`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE date(last_login_at)=date('now')`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE last_login_at >= datetime('now','-7 days')`).first<any>(),
   ])
+  const recentLogins = await c.env.DB.prepare(
+    `SELECT id, full_name, email, role, last_login_at FROM users WHERE last_login_at IS NOT NULL ORDER BY last_login_at DESC LIMIT 6`
+  ).all()
   return c.html(
     <StaffLayout user={user} nav="admin" current="/admin" title="Admin Dashboard">
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <Stat label="Total bookings" value={bookings?.n ?? 0} icon="fa-file-invoice" sub={`${bookings?.pending ?? 0} awaiting response`} />
         <Stat label="Live now" value={liveEvents?.n ?? 0} icon="fa-tower-broadcast" tone="bg-red-50 text-red-600" />
         <Stat label="Upcoming events" value={upcoming?.n ?? 0} icon="fa-trophy" tone="bg-blue-50 text-blue-600" />
         <Stat label="Active employees" value={employees?.n ?? 0} icon="fa-id-badge" tone="bg-emerald-50 text-emerald-600" />
+      </div>
+
+      {/* Accounts & logins overview — admin sees everyone's data */}
+      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <Stat label="Customer accounts" value={custUsers?.n ?? 0} icon="fa-users" tone="bg-cyan-50 text-cyan-600" sub="signed-up customers" />
+        <Stat label="Employee accounts" value={empUsers?.n ?? 0} icon="fa-user-tie" tone="bg-amber-50 text-amber-600" sub="employee + manager" />
+        <Stat label="Admin accounts" value={admUsers?.n ?? 0} icon="fa-user-shield" tone="bg-red-50 text-red-600" />
+        <Stat label="Logged in today" value={loginsToday?.n ?? 0} icon="fa-right-to-bracket" tone="bg-indigo-50 text-indigo-600" />
+        <Stat label="Active last 7 days" value={logins7?.n ?? 0} icon="fa-clock-rotate-left" tone="bg-slate-100 text-slate-600" />
+      </div>
+
+      <div class="mb-6">
+        <a href="/admin/users" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800">
+          <i class="fas fa-users-gear"></i> Open Users &amp; Logins
+        </a>
       </div>
       {(pendingMsgs?.n ?? 0) > 0 && <Notice type="info"><b>{pendingMsgs.n}</b> booking(s) need a response. <a href="/admin/bookings" class="underline font-semibold">Open bookings →</a></Notice>}
       {(issues?.n ?? 0) > 0 && <Notice type="error"><b>{issues.n}</b> open issue report(s). <a href="/admin/tasks" class="underline font-semibold">Review →</a></Notice>}
@@ -1553,4 +1576,212 @@ adminRoutes.post('/team/:id/delete', async (c) => {
   const id = Number(c.req.param('id'))
   await c.env.DB.prepare(`DELETE FROM team_members WHERE id=?`).bind(id).run()
   return c.redirect('/admin/team')
+})
+
+// ============================================================
+// USERS & LOGINS — admin sees every account and login activity
+// ============================================================
+adminRoutes.get('/users', async (c) => {
+  const user = c.get('user')!
+  const role = c.req.query('role')
+  const rows = role
+    ? await c.env.DB.prepare(`SELECT * FROM users WHERE role=? ORDER BY last_login_at DESC NULLS LAST, created_at DESC`).bind(role).all()
+    : await c.env.DB.prepare(`SELECT * FROM users ORDER BY last_login_at DESC NULLS LAST, created_at DESC`).all()
+  const [cust, emp, adm, today, week, total, never] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE role='customer'`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE role IN ('employee','manager')`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE role='admin'`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE date(last_login_at)=date('now')`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE last_login_at >= datetime('now','-7 days')`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users`).first<any>(),
+    c.env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE last_login_at IS NULL`).first<any>(),
+  ])
+  const logins = await c.env.DB.prepare(
+    `SELECT a.*, u.role FROM activity_logs a LEFT JOIN users u ON u.id=a.user_id
+      WHERE a.action IN ('auth.login','auth.register','auth.logout') ORDER BY a.created_at DESC LIMIT 40`
+  ).all()
+  const roleLabel: Record<string, string> = { admin: 'Admin', manager: 'Manager', employee: 'Employee', customer: 'Customer' }
+  return c.html(
+    <StaffLayout user={user} nav="admin" current="/admin/users" title="Users & Logins">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Stat label="Customer accounts" value={cust?.n ?? 0} icon="fa-users" tone="bg-cyan-50 text-cyan-600" />
+        <Stat label="Employee accounts" value={emp?.n ?? 0} icon="fa-user-tie" tone="bg-amber-50 text-amber-600" sub="employee + manager" />
+        <Stat label="Admin accounts" value={adm?.n ?? 0} icon="fa-user-shield" tone="bg-red-50 text-red-600" />
+        <Stat label="Total accounts" value={total?.n ?? 0} icon="fa-users-gear" tone="bg-slate-100 text-slate-600" sub={`${never?.n ?? 0} never signed in`} />
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+        <Stat label="Logged in today" value={today?.n ?? 0} icon="fa-right-to-bracket" tone="bg-indigo-50 text-indigo-600" />
+        <Stat label="Active last 7 days" value={week?.n ?? 0} icon="fa-clock-rotate-left" tone="bg-emerald-50 text-emerald-600" />
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-5">
+        <a href="/admin/users" class={`px-3 py-1.5 rounded-lg text-sm font-medium ${!role ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>All</a>
+        {['customer', 'employee', 'manager', 'admin'].map((r) => (
+          <a href={`/admin/users?role=${r}`} class={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${role === r ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>{r}</a>
+        ))}
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+          <h2 class="font-bold text-slate-900 mb-3">All accounts</h2>
+          <Table cols={['Name', 'Email', 'Role', 'Last login', 'Status', 'Actions']}>
+            {(rows.results as any[]).map((r) => (
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 font-medium text-slate-800">{esc(r.full_name)}</td>
+                <td class="px-4 py-3 text-slate-500 text-xs">{esc(r.email)}</td>
+                <td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">{roleLabel[r.role] || r.role}</span></td>
+                <td class="px-4 py-3 text-slate-500 text-xs">{r.last_login_at ? fmtDateTime(r.last_login_at) : <span class="text-slate-400">never</span>}</td>
+                <td class="px-4 py-3"><Chip status={r.is_active ? 'present' : 'absent'} label={r.is_active ? 'active' : 'inactive'} /></td>
+                <td class="px-4 py-3">
+                  <a href="/admin/users" class="text-xs font-semibold text-red-600 hover:underline">Manage</a>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        </div>
+        <div>
+          <h2 class="font-bold text-slate-900 mb-3">Recent login activity</h2>
+          <div class="space-y-2">
+            {(logins.results as any[]).length === 0 && <Empty icon="fa-clock-rotate-left" title="No login activity yet" />}
+            {(logins.results as any[]).map((l) => (
+              <Card class="p-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-slate-700 truncate">{esc(l.actor_name || 'User')}</div>
+                    <div class="text-xs text-slate-400 truncate">{esc(l.details || '')}</div>
+                  </div>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 uppercase shrink-0">{esc(l.role || '')}</span>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-1">{esc(l.action.replace('auth.', ''))} · {fmtDateTime(l.created_at)}</div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </StaffLayout>
+  )
+})
+
+// ============================================================
+// ATTENDANCE TRACKING — admin monitors every employee's attendance
+// ============================================================
+adminRoutes.get('/attendance', async (c) => {
+  const user = c.get('user')!
+  const day = c.req.query('day') || new Date().toISOString().slice(0, 10)
+  const [today, summary, perEmp, recent] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT a.*, u.full_name, u.email, e.emp_code, e.department, e.designation
+         FROM attendance a JOIN employees e ON e.id=a.employee_id JOIN users u ON u.id=e.user_id
+        WHERE a.work_date=? ORDER BY u.full_name`
+    ).bind(day).all(),
+    c.env.DB.prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM employees WHERE status='active') AS active_emp,
+         (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status IN ('present','late')) AS present_today,
+         (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='late') AS late_today,
+         (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='absent') AS absent_today,
+         (SELECT COUNT(*) FROM attendance WHERE strftime('%Y-%m', work_date)=strftime('%Y-%m','now') AND status IN ('present','late')) AS month_present`
+    ).bind(day, day, day).first<any>(),
+    c.env.DB.prepare(
+      `SELECT e.id, u.full_name, e.emp_code, e.department,
+              (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND strftime('%Y-%m', a.work_date)=strftime('%Y-%m','now') AND a.status IN ('present','late')) AS present_m,
+              (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND strftime('%Y-%m', a.work_date)=strftime('%Y-%m','now') AND a.status='late') AS late_m,
+              (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND strftime('%Y-%m', a.work_date)=strftime('%Y-%m','now') AND a.status='absent') AS absent_m,
+              (SELECT a.status FROM attendance a WHERE a.employee_id=e.id AND a.work_date=? ) AS today_status
+         FROM employees e JOIN users u ON u.id=e.user_id
+        ORDER BY u.full_name`
+    ).bind(day).all(),
+    c.env.DB.prepare(
+      `SELECT a.*, u.full_name FROM attendance a JOIN employees e ON e.id=a.employee_id JOIN users u ON u.id=e.user_id
+        ORDER BY a.work_date DESC, a.check_in DESC LIMIT 25`
+    ).all(),
+  ])
+  const present = today.results as any[]
+  return c.html(
+    <StaffLayout user={user} nav="admin" current="/admin/attendance" title="Attendance Tracking">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <Stat label="Active employees" value={summary?.active_emp ?? 0} icon="fa-id-badge" tone="bg-slate-100 text-slate-600" />
+        <Stat label={`Present (${day})`} value={summary?.present_today ?? 0} icon="fa-fingerprint" tone="bg-emerald-50 text-emerald-600" />
+        <Stat label="Late today" value={summary?.late_today ?? 0} icon="fa-clock" tone="bg-amber-50 text-amber-600" />
+        <Stat label="Absent today" value={summary?.absent_today ?? 0} icon="fa-xmark" tone="bg-rose-50 text-rose-600" />
+        <Stat label="Present this month" value={summary?.month_present ?? 0} icon="fa-calendar-check" tone="bg-cyan-50 text-cyan-600" />
+      </div>
+
+      <Card class="p-4 mb-6">
+        <form method="get" action="/admin/attendance" class="flex flex-wrap items-end gap-3">
+          <Field label="View date"><input type="date" name="day" value={day} class={inputCls} /></Field>
+          <button class={btnPrimary}>Load</button>
+          <a href={`/admin/attendance/export?day=${day}`} class={btnGhost}><i class="fas fa-file-csv"></i> Export CSV</a>
+        </form>
+      </Card>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+          <h2 class="font-bold text-slate-900 mb-3">Checked in on {day}</h2>
+          {present.length === 0 ? <Empty icon="fa-fingerprint" title="No attendance marked" text="No employee has checked in on this date." /> : (
+            <Table cols={['Employee', 'Code', 'Department', 'Check in', 'Check out', 'Status']}>
+              {present.map((r) => (
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3 font-medium text-slate-800">{esc(r.full_name)}</td>
+                  <td class="px-4 py-3 text-slate-500 font-mono text-xs">{esc(r.emp_code || '—')}</td>
+                  <td class="px-4 py-3 text-slate-500">{esc(r.department || '—')}</td>
+                  <td class="px-4 py-3 text-slate-500">{r.check_in ? fmtDateTime(r.check_in).split(', ')[1] : '—'}</td>
+                  <td class="px-4 py-3 text-slate-500">{r.check_out ? fmtDateTime(r.check_out).split(', ')[1] : '—'}</td>
+                  <td class="px-4 py-3"><Chip status={r.status} /></td>
+                </tr>
+              ))}
+            </Table>
+          )}
+        </div>
+        <div>
+          <h2 class="font-bold text-slate-900 mb-3">Recent attendance</h2>
+          <div class="space-y-2">
+            {recent.results.length === 0 && <Empty icon="fa-clock-rotate-left" title="No records yet" />}
+            {(recent.results as any[]).map((r) => (
+              <Card class="p-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-slate-700 truncate">{esc(r.full_name)}</div>
+                    <div class="text-xs text-slate-400">{fmtDate(r.work_date)} · {r.check_in ? fmtDateTime(r.check_in).split(', ')[1] : '—'}</div>
+                  </div>
+                  <Chip status={r.status} />
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <h2 class="font-bold text-slate-900 mt-8 mb-3">Month summary by employee</h2>
+      <Table cols={['Employee', 'Code', 'Department', 'Present', 'Late', 'Absent', `Status ${day}`]}>
+        {(perEmp.results as any[]).map((r) => (
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-medium text-slate-800">{esc(r.full_name)}</td>
+            <td class="px-4 py-3 text-slate-500 font-mono text-xs">{esc(r.emp_code || '—')}</td>
+            <td class="px-4 py-3 text-slate-500">{esc(r.department || '—')}</td>
+            <td class="px-4 py-3 font-semibold text-emerald-600">{r.present_m ?? 0}</td>
+            <td class="px-4 py-3 font-semibold text-amber-600">{r.late_m ?? 0}</td>
+            <td class="px-4 py-3 font-semibold text-rose-600">{r.absent_m ?? 0}</td>
+            <td class="px-4 py-3">{r.today_status ? <Chip status={r.today_status} /> : <span class="text-xs text-slate-400">not marked</span>}</td>
+          </tr>
+        ))}
+      </Table>
+    </StaffLayout>
+  )
+})
+
+adminRoutes.get('/attendance/export', async (c) => {
+  const day = c.req.query('day') || new Date().toISOString().slice(0, 10)
+  const rows = await c.env.DB.prepare(
+    `SELECT u.full_name, u.email, e.emp_code, e.department, a.work_date, a.check_in, a.check_out, a.status, a.notes
+       FROM attendance a JOIN employees e ON e.id=a.employee_id JOIN users u ON u.id=e.user_id
+      WHERE a.work_date=? ORDER BY u.full_name`
+  ).bind(day).all()
+  const head = 'Name,Email,Employee Code,Department,Date,Check In,Check Out,Status,Notes\n'
+  const body = (rows.results as any[])
+    .map((r) => [r.full_name, r.email, r.emp_code, r.department, r.work_date, r.check_in, r.check_out, r.status, r.notes].map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  return new Response(head + body, {
+    headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="attendance-${day}.csv"` },
+  })
 })

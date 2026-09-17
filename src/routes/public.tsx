@@ -20,7 +20,7 @@ publicRoutes.get('/', async (c) => {
   ])
 
   return c.html(
-    <PublicLayout current="/" title="Live Sports Broadcast & Production">
+    <PublicLayout user={c.get('user')} current="/" title="Live Sports Broadcast & Production">
       {/* HERO */}
       <section class="relative overflow-hidden">
         <div class="absolute inset-0 opacity-30" style="background-image:radial-gradient(circle at 15% 10%, #ef4444 0, transparent 35%),radial-gradient(circle at 85% 20%, #f97316 0, transparent 30%)"></div>
@@ -189,7 +189,7 @@ publicRoutes.get('/', async (c) => {
 publicRoutes.get('/about', async (c) => {
   const team = await c.env.DB.prepare(`SELECT * FROM team_members WHERE is_active=1 ORDER BY sort_order`).all()
   return c.html(
-    <PublicLayout current="/about" title="About Us">
+    <PublicLayout user={c.get('user')} current="/about" title="About Us">
       <PageHero eyebrow="About" title="Built for the pace of live sport" subtitle="We are a dedicated sports broadcast and media-production team — cameras, commentary, graphics, streaming and social-first highlights under one roof." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 grid lg:grid-cols-2 gap-12">
         <div>
@@ -252,7 +252,7 @@ publicRoutes.get('/about', async (c) => {
 publicRoutes.get('/services', async (c) => {
   const services = await c.env.DB.prepare(`SELECT * FROM services WHERE is_active=1 ORDER BY sort_order`).all()
   return c.html(
-    <PublicLayout current="/services" title="Services">
+    <PublicLayout user={c.get('user')} current="/services" title="Services">
       <PageHero eyebrow="What we do" title="Complete Sports Media Services" subtitle="Professional media solutions for leagues, tournaments and sporting events." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -298,7 +298,7 @@ publicRoutes.get('/portfolio', async (c) => {
   const rows = await q.all()
   const sports = await c.env.DB.prepare(`SELECT DISTINCT sport FROM portfolio WHERE sport IS NOT NULL`).all()
   return c.html(
-    <PublicLayout current="/portfolio" title="Portfolio">
+    <PublicLayout user={c.get('user')} current="/portfolio" title="Portfolio">
       <PageHero eyebrow="Portfolio" title="Projects we've delivered" subtitle="Grouped by sport and event type, with the services delivered for each." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div class="flex flex-wrap gap-2 mb-8">
@@ -333,7 +333,7 @@ publicRoutes.get('/events', async (c) => {
   const rows = await c.env.DB.prepare(`SELECT * FROM events WHERE status IN ('upcoming','live','completed') ORDER BY COALESCE(start_date, '9999') DESC`).all()
   const by = (s: string) => (rows.results as any[]).filter((e) => e.status === s)
   return c.html(
-    <PublicLayout current="/events" title="Events">
+    <PublicLayout user={c.get('user')} current="/events" title="Events">
       <PageHero eyebrow="Events" title="Upcoming, live and completed" subtitle="Every event has its own page with schedule, production details and media." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 space-y-12">
         {[
@@ -384,7 +384,7 @@ publicRoutes.get('/events/:id', async (c) => {
     c.env.DB.prepare(`SELECT * FROM production_schedule WHERE event_id=? ORDER BY start_time`).bind(id).all(),
   ])
   return c.html(
-    <PublicLayout title={e.name}>
+    <PublicLayout user={c.get('user')} title={e.name}>
       <PageHero eyebrow={e.sport || 'Event'} title={e.name} subtitle={e.description} />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-6">
@@ -484,7 +484,7 @@ publicRoutes.get('/live', async (c) => {
   const ytUp = ytUpcoming.results as any[]
   const ytList = ytRecent.results as any[]
   return c.html(
-    <PublicLayout current="/live" title="Live">
+    <PublicLayout user={c.get('user')} current="/live" title="Live">
       <PageHero eyebrow="Live Hub" title="Watch us live" subtitle="Current live broadcast, upcoming streams, and our latest matches from the AWADH Sports YouTube channel." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2">
@@ -615,7 +615,7 @@ publicRoutes.get('/gallery', async (c) => {
   ])
   const types = ['photo', 'video', 'highlight', 'reel', 'interview']
   return c.html(
-    <PublicLayout current="/gallery" title="Media Gallery">
+    <PublicLayout user={c.get('user')} current="/gallery" title="Media Gallery">
       <PageHero eyebrow="Gallery" title="Photos, videos & highlights" subtitle="Approved and published media from our events, plus our latest live broadcasts on YouTube." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         {/* YouTube videos from the AWADH Sports channel */}
@@ -670,7 +670,7 @@ publicRoutes.get('/gallery', async (c) => {
 // ---------- CONTACT ----------
 publicRoutes.get('/contact', (c) =>
   c.html(
-    <PublicLayout current="/contact" title="Contact">
+    <PublicLayout user={c.get('user')} current="/contact" title="Contact">
       <PageHero eyebrow="Contact" title="Let's talk broadcast" subtitle="Send us a message or use the booking form for a detailed quotation." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid lg:grid-cols-2 gap-10">
         <div class="rounded-3xl bg-white/5 border border-white/10 p-8">
@@ -716,7 +716,7 @@ publicRoutes.get('/contact', (c) =>
 publicRoutes.get('/careers', async (c) => {
   const jobs = await c.env.DB.prepare(`SELECT * FROM job_openings WHERE is_open=1 ORDER BY created_at DESC`).all()
   return c.html(
-    <PublicLayout current="/careers" title="Careers">
+    <PublicLayout user={c.get('user')} current="/careers" title="Careers">
       <PageHero eyebrow="Careers" title="Join the crew" subtitle="We're always looking for camera operators, producers, editors and streaming engineers." />
       <section class="max-w-5xl mx-auto px-4 sm:px-6 py-12 space-y-5">
         {(jobs.results as any[]).length === 0 && <p class="text-slate-500">No open positions right now. Check back soon.</p>}

@@ -1,4 +1,5 @@
 import type { FC } from 'hono/jsx'
+import type { SessionUser } from './types'
 
 export const BRAND = {
   name: 'AWADH Sports Live',
@@ -55,7 +56,56 @@ const MORE = [
   { href: '/careers', label: 'Careers', icon: 'fa-briefcase' },
 ]
 
-export const PublicHeader: FC<{ current?: string }> = ({ current }) => {
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'Administrator',
+  manager: 'Production Manager',
+  employee: 'Employee',
+  customer: 'Customer',
+}
+
+const UserMenu: FC<{ user: SessionUser }> = ({ user }) => {
+  const home = user.role === 'admin' ? '/admin' : user.role === 'customer' ? '/account' : '/portal'
+  return (
+    <div class="relative group">
+      <button class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/15 hover:bg-white/5 transition">
+        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-red-600 to-orange-500 text-white flex items-center justify-center text-xs font-bold">
+          {user.full_name.charAt(0).toUpperCase()}
+        </span>
+        <span class="hidden sm:block text-left leading-tight">
+          <span class="block text-xs font-semibold text-white max-w-[9rem] truncate">{user.full_name}</span>
+          <span class="block text-[10px] text-slate-400 uppercase tracking-wide">{ROLE_LABEL[user.role] || user.role}</span>
+        </span>
+        <i class="fas fa-chevron-down text-[10px] opacity-60 group-hover:rotate-180 transition"></i>
+      </button>
+      <div class="absolute right-0 top-full pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition">
+        <div class="rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur shadow-2xl p-1.5">
+          <div class="px-3 py-2 border-b border-white/10 mb-1">
+            <div class="text-sm font-semibold text-white truncate">{user.full_name}</div>
+            <div class="text-xs text-slate-400 truncate">{user.email}</div>
+          </div>
+          <a href="/profile" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 text-sm">
+            <i class="fas fa-user w-4 text-center text-slate-500"></i> My Profile
+          </a>
+          <a href={home} class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 text-sm">
+            <i class="fas fa-gauge-high w-4 text-center text-slate-500"></i> My Dashboard
+          </a>
+          {user.role === 'customer' && (
+            <a href="/book" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 text-sm">
+              <i class="fas fa-calendar-plus w-4 text-center text-slate-500"></i> New Booking
+            </a>
+          )}
+          <form method="post" action="/logout">
+            <button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-rose-300 hover:bg-rose-500/15 text-sm text-left">
+              <i class="fas fa-right-from-bracket w-4 text-center"></i> Logout
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export const PublicHeader: FC<{ current?: string; user?: SessionUser | null }> = ({ current, user }) => {
   const isMore = MORE.some((m) => m.href === current)
   return (
     <header class="site-header sticky top-0 z-50 backdrop-blur bg-slate-950/85 border-b border-white/10">
@@ -96,12 +146,18 @@ export const PublicHeader: FC<{ current?: string }> = ({ current }) => {
 
         <div class="flex items-center gap-2">
           <a href="/book" class="hidden sm:inline-flex btn-primary text-sm">Book Now</a>
-          <a href="/register" class="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm font-medium">
-            <i class="fas fa-user-plus"></i> Sign Up
-          </a>
-          <a href="/login" class="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm font-medium">
-            <i class="fas fa-right-to-bracket"></i> Sign In
-          </a>
+          {user ? (
+            <UserMenu user={user} />
+          ) : (
+            <>
+              <a href="/register" class="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm font-medium">
+                <i class="fas fa-user-plus"></i> Sign Up
+              </a>
+              <a href="/login" class="hidden md:inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-white/15 text-slate-200 hover:bg-white/5 text-sm font-medium">
+                <i class="fas fa-right-to-bracket"></i> Sign In
+              </a>
+            </>
+          )}
           <button id="nav-toggle" class="lg:hidden text-white w-10 h-10 rounded-lg hover:bg-white/10" aria-label="Menu">
             <i class="fas fa-bars"></i>
           </button>
@@ -116,8 +172,19 @@ export const PublicHeader: FC<{ current?: string }> = ({ current }) => {
         </div>
         <div class="mt-3 grid grid-cols-2 gap-2">
           <a href="/book" class="btn-primary text-center text-sm">Book Now</a>
-          <a href="/register" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm">Sign Up</a>
-          <a href="/login" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm col-span-2">Sign In</a>
+          {user ? (
+            <>
+              <a href="/profile" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm">My Profile</a>
+              <form method="post" action="/logout" class="col-span-2">
+                <button class="w-full px-3 py-2 rounded-lg border border-rose-500/40 text-rose-300 text-center text-sm">Logout ({user.full_name.split(' ')[0]})</button>
+              </form>
+            </>
+          ) : (
+            <>
+              <a href="/register" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm">Sign Up</a>
+              <a href="/login" class="px-3 py-2 rounded-lg border border-white/15 text-slate-200 text-center text-sm col-span-2">Sign In</a>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -191,16 +258,17 @@ export const ContactFab: FC = () => (
   </div>
 )
 
-export const PublicLayout: FC<{ children?: any; current?: string; title?: string; description?: string }> = ({
+export const PublicLayout: FC<{ children?: any; current?: string; title?: string; description?: string; user?: SessionUser | null }> = ({
   children,
   current,
   title,
   description,
+  user,
 }) => (
   <html lang="en">
     <PublicHead title={title} description={description} />
     <body class="bg-slate-950 text-slate-100 antialiased">
-      <PublicHeader current={current} />
+      <PublicHeader current={current} user={user} />
       <main>{children}</main>
       <PublicFooter />
       <ContactFab />

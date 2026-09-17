@@ -12,7 +12,7 @@ bookingRoutes.get('/book', async (c) => {
   const services = await c.env.DB.prepare(`SELECT * FROM services WHERE is_active=1 ORDER BY sort_order`).all()
   const preselect = c.req.query('service')
   return c.html(
-    <PublicLayout current="/book" title="Book / Request Quote">
+    <PublicLayout user={c.get('user')} current="/book" title="Book / Request Quote">
       <PageHero eyebrow="Booking" title="Request a quote" subtitle="No account required. Submit your event details and we will generate a Booking ID instantly." />
       <section class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
         <form id="booking-form" class="rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-8 space-y-8">
@@ -85,7 +85,7 @@ bookingRoutes.get('/book', async (c) => {
 // ---------- TRACK BOOKING ----------
 bookingRoutes.get('/track', (c) =>
   c.html(
-    <PublicLayout current="/track" title="Track Booking">
+    <PublicLayout user={c.get('user')} current="/track" title="Track Booking">
       <PageHero eyebrow="Tracking" title="Track your booking" subtitle="Enter your Booking ID and we'll send a one-time password (OTP) to your registered phone/email." />
       <section class="max-w-lg mx-auto px-4 sm:px-6 py-12">
         {/* Step 1: request OTP */}

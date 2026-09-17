@@ -72,18 +72,48 @@ Home · About · Services · Portfolio · Events (with per-event pages) · **Liv
 
 > **Security**: booking details are never shown from the Booking ID alone — **OTP verification is required**. OTPs are hashed at rest, expire in 10 minutes, and are attempt-limited. Internal admin notes are hidden from customers.
 
-### Login (all roles — single entry point)
-Sign in at **/login**. The page is a plain **Login** (no "staff/admin" wording).
-Every active role can sign in and is routed to the right place automatically:
+### Sign Up / Sign In
+
+The login page is a plain **Sign In** form (no "staff/admin" wording, no role explainer panel). A new visitor registers first; the data is saved, and only then do they sign in.
+
+**1. Sign Up — `/register`**
+Fields: full name, email, phone (optional), password, confirm password, organisation (optional).
+The account is saved immediately as a **customer** (`users` row with `role='customer'` plus a linked `customers` row), then the visitor is sent to Sign In with a success message.
+Validation: required fields, email format, password ≥ 6 chars, passwords match, duplicate emails rejected.
+
+**2. Sign In — `/login`**
+Every active role signs in here and is routed automatically to their own workspace.
 
 | Role | Demo account | Password | Lands on |
 |---|---|---|---|
 | Admin | `admin@primecast.example` | `Admin@123` | `/admin` control centre |
-| Production Manager | `manager@primecast.example` | `Password@123` | `/portal` operations portal |
-| Employee | `employee@primecast.example` | `Password@123` | `/portal` operations portal |
-| Customer | `customer@awadhsports.example` | `Admin@123` | `/account` customer dashboard |
+| Production Manager | `manager@primecast.example` | `Password@123` | `/portal` employee dashboard |
+| Employee | `employee@primecast.example` | `Password@123` | `/portal` employee dashboard |
+| Customer | `customer@awadhsports.example` | `Admin@123` | `/` the public home page |
 
 > The seeded demo logins still use the legacy `@primecast.example` domain; the public-facing brand is **AWADH Sports Live**. New staff accounts are created by an admin (Employees module) with the email + password of your choice.
+
+### One profile for every user
+Whichever role signs in, a full **profile** is created and reachable at **`/profile`** (also in the navbar user menu and the staff sidebar): avatar, name, email, role badge, last login, editable contact details and a **change-password** form.
+
+- **Customer** → lands on the public **home page** and browses the **whole website**; the navbar shows a user menu with **My Profile · My Dashboard (`/account`) · New Booking · Logout**, so they can process bookings, quotations and enquiries.
+- **Employee / Manager** → lands on the **employee dashboard** (`/portal`): **attendance check-in / check-out**, **assigned tasks**, **upcoming events**, production schedule, equipment, media upload, issue reports, leave and notifications — plus their own profile.
+- **Admin** → lands on the **admin control centre** and sees **everything**.
+
+### Three distinct role experiences (admin · employee · customer)
+
+| Role | What they get after signing in |
+|---|---|
+| **Customer** | The public **home page + whole website overview**, and a personal dashboard (`/account`) with their bookings, statuses, messages and quotations, profile editing and new booking requests. |
+| **Employee** | Their own **employee dashboard** (`/portal`): attendance check-in / check-out, assigned tasks, upcoming events, production schedule, equipment, media, issues, leave, notifications. Cannot reach admin or customer areas. |
+| **Admin** | **Full control of the platform**: view/update bookings, manage customers, create employee accounts (email + password), assign tasks, **track attendance**, manage events & live control, **view all accounts and logins**, and change website content (services, live events, latest YouTube matches, photos/media, About team). |
+
+Role access is enforced **server-side** on every protected route, so a customer cannot open `/admin` or `/portal` and an employee cannot open `/admin` or `/account`.
+
+### Admin visibility into every account
+- **`/admin/users` — Users & Logins**: counts of **customer / employee / admin accounts**, how many signed in **today** and in the **last 7 days**, a filterable list of every account with role + last-login + status, and a **recent login activity** feed (logins, sign-ups, logouts).
+- **`/admin` dashboard**: an *Accounts & logins* row (customer accounts, employee accounts, admin accounts, logged in today, active last 7 days) sits beside the booking/event/employee KPIs.
+- **`/admin/attendance` — Attendance Tracking**: pick any date to see who checked in/out, per-employee **month present / late / absent** summary, and **Export CSV**.
 
 - **Customer dashboard** (`/account`): signed-in customers see their bookings, statuses, message/quote counts and can update their profile (`/account/profile`) — and still browse the whole public website and create new bookings.
 - **Employee portal** (`/portal`): dashboard, attendance (check-in/out), my tasks, my events, production schedule, equipment, media upload, issue reports, leave, notifications.
@@ -98,10 +128,11 @@ Every active role can sign in and is routed to the right place automatically:
 | Area | Paths |
 |---|---|
 | Public | `/`, `/about`, `/services`, `/portfolio`, `/events`, `/events/:id`, `/live`, `/gallery`, `/contact`, `/careers`, `/book`, `/track` |
-| Auth | `/login` (GET/POST), `/logout` (POST) |
+| Auth | `/register` (GET/POST), `/login` (GET/POST), `/logout` (POST) |
+| Profile (all roles) | `/profile` (GET/POST), `/profile/password` (POST) |
 | Customer | `/account`, `/account/profile` |
-| Employee portal | `/portal`, `/portal/attendance`, `/portal/tasks`, `/portal/events`, `/portal/schedule`, `/portal/equipment`, `/portal/media`, `/portal/issues`, `/portal/leave`, `/portal/notifications` |
-| Admin | `/admin`, `/admin/bookings`, `/admin/bookings/:id`, `/admin/customers`, `/admin/employees`, `/admin/roles`, `/admin/events`, `/admin/events/:id`, `/admin/live`, `/admin/tasks`, `/admin/equipment`, `/admin/media`, `/admin/youtube`, `/admin/team`, `/admin/portfolio`, `/admin/reports`, `/admin/notifications`, `/admin/cms`, `/admin/logs`, `/admin/settings` |
+| Employee dashboard | `/portal`, `/portal/attendance`, `/portal/tasks`, `/portal/events`, `/portal/schedule`, `/portal/equipment`, `/portal/media`, `/portal/issues`, `/portal/leave`, `/portal/notifications` |
+| Admin | `/admin`, `/admin/bookings`, `/admin/bookings/:id`, `/admin/customers`, `/admin/users`, `/admin/employees`, `/admin/attendance`, `/admin/attendance/export`, `/admin/roles`, `/admin/events`, `/admin/events/:id`, `/admin/live`, `/admin/tasks`, `/admin/equipment`, `/admin/media`, `/admin/youtube`, `/admin/team`, `/admin/portfolio`, `/admin/reports`, `/admin/notifications`, `/admin/cms`, `/admin/logs`, `/admin/settings` |
 | Public API | `POST /api/bookings`, `POST /api/bookings/track/request-otp`, `POST /api/bookings/track/verify`, `POST /api/contact`, `POST /api/careers/apply` |
 | Staff API | `POST /api/attendance/checkin`, `/checkout`, `POST /api/tasks/:id/status`, `POST /api/notifications/read-all`, `GET /api/health` |
 
@@ -119,7 +150,6 @@ Every active role can sign in and is routed to the right place automatically:
 - Payments / invoices, automated CRM workflows.
 - Email / SMS / WhatsApp delivery of OTPs and notifications (provider integration). *Currently the OTP is surfaced in the UI as a demo code because no provider is configured.*
 - Automatic YouTube sync (videos are added by admin from `/admin/youtube`; the title is auto-fetched from YouTube on add).
-- Customer self-registration (customer accounts are created by staff/admin; a seeded demo customer exists).
 - Advanced analytics / forecasting dashboards, PWA/mobile app.
 
 ## Deployment

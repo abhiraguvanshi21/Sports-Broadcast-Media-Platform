@@ -6,7 +6,9 @@ const ADMIN_NAV: { href: string; label: string; icon: string; module: Module }[]
   { href: '/admin', label: 'Dashboard', icon: 'fa-gauge-high', module: 'dashboard' },
   { href: '/admin/bookings', label: 'Bookings', icon: 'fa-file-invoice', module: 'bookings' },
   { href: '/admin/customers', label: 'Customers', icon: 'fa-users', module: 'customers' },
+  { href: '/admin/users', label: 'Users & Logins', icon: 'fa-users-gear', module: 'employees' },
   { href: '/admin/employees', label: 'Employees', icon: 'fa-id-badge', module: 'employees' },
+  { href: '/admin/attendance', label: 'Attendance Tracking', icon: 'fa-fingerprint', module: 'attendance' },
   { href: '/admin/roles', label: 'Roles & Permissions', icon: 'fa-user-lock', module: 'roles' },
   { href: '/admin/events', label: 'Events', icon: 'fa-trophy', module: 'events' },
   { href: '/admin/live', label: 'Live Control', icon: 'fa-tower-broadcast', module: 'live' },
@@ -81,6 +83,9 @@ export const StaffLayout: FC<{
               ))}
             </nav>
             <div class="p-3 border-t border-white/10">
+              <a href="/profile" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm hover:bg-white/5 hover:text-white">
+                <i class="fas fa-user w-4 text-center"></i> My Profile
+              </a>
               <a href="/" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm hover:bg-white/5 hover:text-white">
                 <i class="fas fa-globe w-4 text-center"></i> View Website
               </a>

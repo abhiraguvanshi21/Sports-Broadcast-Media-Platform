@@ -35,7 +35,7 @@ accountRoutes.get('/', async (c) => {
   const upcoming = rows.filter((b) => b.event_date && new Date(b.event_date) >= new Date()).length
 
   return c.html(
-    <PublicLayout current="/account" title="My Dashboard">
+    <PublicLayout user={c.get('user')} current="/account" title="My Dashboard">
       <PageHero eyebrow={`Welcome, ${user.full_name.split(' ')[0]}`} title="My dashboard" subtitle="Track your enquiries, quotations and scheduled productions — and browse the full website any time." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 space-y-8">
         {/* quick actions */}
@@ -105,7 +105,7 @@ accountRoutes.get('/profile', async (c) => {
     .bind(user.id, user.email).first()
   const saved = c.req.query('saved')
   return c.html(
-    <PublicLayout current="/account" title="My Profile">
+    <PublicLayout user={c.get('user')} current="/account" title="My Profile">
       <PageHero eyebrow="My account" title="Profile" subtitle="Keep your contact details up to date so we can reach you about your bookings." />
       <section class="max-w-2xl mx-auto px-4 sm:px-6 py-12">
         {saved && <div class="mb-5 msg-success rounded-xl px-4 py-3 text-sm"><i class="fas fa-circle-check mr-1"></i>Profile updated.</div>}
