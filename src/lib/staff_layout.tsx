@@ -9,6 +9,7 @@ const ADMIN_NAV: { href: string; label: string; icon: string; module: Module }[]
   { href: '/admin/users', label: 'Users & Logins', icon: 'fa-users-gear', module: 'employees' },
   { href: '/admin/employees', label: 'Employees', icon: 'fa-id-badge', module: 'employees' },
   { href: '/admin/attendance', label: 'Attendance Tracking', icon: 'fa-fingerprint', module: 'attendance' },
+  { href: '/admin/salary', label: 'Salary', icon: 'fa-indian-rupee-sign', module: 'attendance' },
   { href: '/admin/roles', label: 'Roles & Permissions', icon: 'fa-user-lock', module: 'roles' },
   { href: '/admin/events', label: 'Events', icon: 'fa-trophy', module: 'events' },
   { href: '/admin/live', label: 'Live Control', icon: 'fa-tower-broadcast', module: 'live' },

@@ -3,22 +3,47 @@ import type { AppEnv } from '../lib/types'
 import { PublicLayout, PageHero, BRAND } from '../lib/public_layout'
 import { SectionTitle, Chip } from '../lib/components'
 import { fmtDate, esc } from '../lib/utils'
+import { syncYouTube } from '../lib/youtube'
 
 export const publicRoutes = new Hono<AppEnv>()
+
+// Fire-and-forget YouTube auto-sync (cached via a freshness window so it
+// doesn't run on every request). Any error is swallowed — the site still works.
+function kickYouTubeSync(env: AppEnv['Bindings']) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    syncYouTube(env, { ttlMinutes: 20 }).catch(() => {})
+  } catch { /* ignore */ }
+}
+
+/** Safely query youtube_videos even if the newer columns aren't migrated yet. */
+async function ytRows(db: D1Database, where: string, limit: number) {
+  try {
+    const q = await db.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 ${where} ORDER BY sort_order, id LIMIT ${limit}`).all()
+    return q.results as any[]
+  } catch {
+    return [] as any[]
+  }
+}
 
 // ---------- HOME ----------
 publicRoutes.get('/', async (c) => {
   const db = c.env.DB
-  const [liveNow, upcoming, latest, services, portfolio, stats, ytRecent, playlists] = await Promise.all([
+  kickYouTubeSync(c.env)
+  const [liveNow, upcoming, latest, services, portfolio, stats, ytRecent, playlists, ytLive, ytUpcoming] = await Promise.all([
     db.prepare(`SELECT le.*, e.name, e.sport, e.venue_name FROM live_events le JOIN events e ON e.id = le.event_id WHERE le.status='live' ORDER BY le.display_order LIMIT 1`).first(),
     db.prepare(`SELECT e.* FROM events e WHERE e.status='upcoming' ORDER BY e.start_date LIMIT 4`).all(),
     db.prepare(`SELECT m.* FROM media m WHERE m.status='approved' AND m.is_public=1 ORDER BY m.created_at DESC LIMIT 6`).all(),
     db.prepare(`SELECT * FROM services WHERE is_active=1 ORDER BY sort_order LIMIT 8`).all(),
     db.prepare(`SELECT * FROM portfolio WHERE is_published=1 ORDER BY created_at DESC LIMIT 6`).all(),
     db.prepare(`SELECT (SELECT COUNT(*) FROM events) events, (SELECT COUNT(*) FROM events WHERE status='completed') completed, (SELECT COUNT(*) FROM media WHERE is_public=1) media, (SELECT COUNT(*) FROM employees WHERE status='active') staff`).first<any>(),
-    db.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=0 AND is_upcoming=0 ORDER BY sort_order LIMIT 8`).all(),
+    ytRows(db, `AND is_live=0 AND is_upcoming=0`, 8),
     db.prepare(`SELECT * FROM youtube_playlists WHERE is_active=1 ORDER BY is_featured DESC, sort_order LIMIT 6`).all(),
+    ytRows(db, `AND is_live=1`, 1),
+    ytRows(db, `AND is_upcoming=1`, 4),
   ])
+  const ytLiveRow = (ytLive as any[])[0]
+  const ytUpRows = ytUpcoming as any[]
 
   return c.html(
     <PublicLayout user={c.get('user')} current="/" title="Live Sports Broadcast & Production">
@@ -97,11 +122,33 @@ publicRoutes.get('/', async (c) => {
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10 grid lg:grid-cols-2 gap-8">
         <div class="rounded-3xl border border-red-500/30 bg-gradient-to-br from-red-500/10 to-transparent p-7">
           <div class="flex items-center justify-between">
-            <h3 class="font-extrabold text-xl text-white">Live & Upcoming</h3>
+            <h3 class="font-extrabold text-xl text-white">Live &amp; Upcoming</h3>
             <a href="/live" class="text-sm text-red-400 hover:text-red-300 font-semibold">Go to Live <i class="fas fa-arrow-right text-xs"></i></a>
           </div>
           <div class="mt-5 space-y-3">
-            {(upcoming.results as any[]).length === 0 && <p class="text-slate-500 text-sm">No upcoming events scheduled.</p>}
+            {/* YouTube: currently live */}
+            {ytLiveRow && (
+              <a href={`https://www.youtube.com/watch?v=${ytLiveRow.video_id}`} target="_blank" rel="noopener" class="flex items-center gap-4 p-4 rounded-2xl bg-red-500/15 border border-red-500/40 hover:border-red-500 transition">
+                <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400"><i class="fas fa-circle text-[8px] live-dot"></i></div>
+                <div class="min-w-0 flex-1">
+                  <div class="font-semibold text-white line-clamp-1">{esc(ytLiveRow.title)}</div>
+                  <div class="text-xs text-red-300 font-semibold uppercase tracking-wide mt-0.5">Live on YouTube</div>
+                </div>
+                <Chip status="live" />
+              </a>
+            )}
+            {/* YouTube: upcoming */}
+            {ytUpRows.map((u) => (
+              <a href={`https://www.youtube.com/watch?v=${u.video_id}`} target="_blank" rel="noopener" class="flex items-center gap-4 p-4 rounded-2xl bg-slate-900/60 border border-white/10 hover:border-white/25 transition">
+                <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-blue-400"><i class="fab fa-youtube"></i></div>
+                <div class="min-w-0 flex-1">
+                  <div class="font-semibold text-white line-clamp-1">{esc(u.title)}</div>
+                  <div class="text-xs text-slate-400">{u.scheduled_at ? `Scheduled ${fmtDate(u.scheduled_at)}` : 'Upcoming stream'}</div>
+                </div>
+                <Chip status="upcoming" />
+              </a>
+            ))}
+            {/* Scheduled events */}
             {(upcoming.results as any[]).map((e) => (
               <a href={`/events/${e.id}`} class="flex items-center gap-4 p-4 rounded-2xl bg-slate-900/60 border border-white/10 hover:border-white/25 transition">
                 <div class="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-red-400"><i class="fas fa-trophy"></i></div>
@@ -112,6 +159,7 @@ publicRoutes.get('/', async (c) => {
                 <Chip status="upcoming" />
               </a>
             ))}
+            {!ytLiveRow && ytUpRows.length === 0 && (upcoming.results as any[]).length === 0 && <p class="text-slate-500 text-sm">No upcoming events scheduled.</p>}
           </div>
         </div>
         <div class="rounded-3xl border border-white/10 bg-white/5 p-7">
@@ -132,14 +180,14 @@ publicRoutes.get('/', async (c) => {
       </section>
 
       {/* LATEST FROM YOUTUBE */}
-      {(ytRecent.results as any[]).length > 0 && (
+      {(ytRecent as any[]).length > 0 && (
         <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
           <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
             <SectionTitle eyebrow="From our channel" title="Latest live broadcasts" subtitle="Recent matches streamed live on the AWADH Sports YouTube channel." light />
             <a href={BRAND.youtube} target="_blank" rel="noopener" class="text-sm text-red-400 hover:text-red-300 font-semibold"><i class="fab fa-youtube mr-1"></i> Subscribe →</a>
           </div>
           <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {(ytRecent.results as any[]).map((v) => (
+            {(ytRecent as any[]).map((v) => (
               <a href={`https://www.youtube.com/watch?v=${v.video_id}`} target="_blank" rel="noopener" class="rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-red-500/50 transition group">
                 <div class="aspect-video bg-slate-800 relative">
                   <img src={`https://i.ytimg.com/vi/${v.video_id}/hqdefault.jpg`} class="w-full h-full object-cover group-hover:scale-105 transition" loading="lazy" />
@@ -259,22 +307,36 @@ publicRoutes.get('/about', async (c) => {
 // ---------- SERVICES ----------
 publicRoutes.get('/services', async (c) => {
   const services = await c.env.DB.prepare(`SELECT * FROM services WHERE is_active=1 ORDER BY sort_order`).all()
+  const svc = (services.results as any[]).map((s) => ({
+    id: s.id,
+    slug: s.slug,
+    title: s.title,
+    short_desc: s.short_desc || '',
+    description: s.description || '',
+    icon: s.icon || 'fa-broadcast-tower',
+  }))
   return c.html(
     <PublicLayout user={c.get('user')} current="/services" title="Services">
-      <PageHero eyebrow="What we do" title="Complete Sports Media Services" subtitle="Professional media solutions for leagues, tournaments and sporting events." />
+      <PageHero eyebrow="What we do" title="Complete Sports Media Services" subtitle="Professional media solutions for leagues, tournaments and sporting events. Tap any service to see full details." />
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {(services.results as any[]).map((s, i) => (
-            <article id={s.slug} class="group relative flex flex-col p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-red-500/50 hover:bg-white/[0.07] transition">
+          {svc.map((s, i) => (
+            <article
+              id={s.slug}
+              data-service={String(i)}
+              role="button"
+              tabindex={0}
+              class="service-card group relative flex flex-col p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-red-500/50 hover:bg-white/[0.07] transition cursor-pointer"
+            >
               <span class="absolute top-5 right-5 text-4xl font-black text-white/[0.06] group-hover:text-red-500/15 transition">{String(i + 1).padStart(2, '0')}</span>
               <span class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg">
-                <i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i>
+                <i class={`fas ${s.icon}`}></i>
               </span>
               <h3 class="text-lg font-bold text-white">{esc(s.title)}</h3>
-              <p class="text-sm text-slate-400 mt-2 flex-1">{esc(s.short_desc)}</p>
-              <a href={`/book?service=${s.id}`} class="inline-flex items-center gap-2 mt-4 text-red-400 hover:text-red-300 font-semibold text-sm">
-                Request this service <i class="fas fa-arrow-right text-xs"></i>
-              </a>
+              <p class="text-sm text-slate-300 mt-2 flex-1">{esc(s.short_desc)}</p>
+              <span class="inline-flex items-center gap-2 mt-4 text-red-400 group-hover:text-red-300 font-semibold text-sm">
+                View details <i class="fas fa-circle-plus text-xs"></i>
+              </span>
             </article>
           ))}
         </div>
@@ -293,6 +355,29 @@ publicRoutes.get('/services', async (c) => {
         </div>
         <div class="text-center pt-8"><a href="/book" class="btn-primary px-6 py-3">Request a Custom Quote</a></div>
       </section>
+
+      {/* Service details modal — opens centered on card tap */}
+      <div id="service-modal" class="service-modal hidden" role="dialog" aria-modal="true" aria-labelledby="service-modal-title">
+        <div class="service-modal__backdrop" data-close></div>
+        <div class="service-modal__box">
+          <button class="service-modal__close" data-close aria-label="Close"><i class="fas fa-xmark"></i></button>
+          <div class="flex items-start gap-4">
+            <span id="service-modal-icon" class="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center text-2xl shadow-lg"><i class="fas fa-broadcast-tower"></i></span>
+            <div class="min-w-0 pt-1">
+              <h3 id="service-modal-title" class="text-xl font-extrabold text-white">Service</h3>
+              <p id="service-modal-short" class="text-sm text-slate-400 mt-1">—</p>
+            </div>
+          </div>
+          <div id="service-modal-body" class="mt-5 text-slate-200 text-[0.95rem] leading-relaxed whitespace-pre-line">—</div>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <a id="service-modal-book" href="/book" class="btn-primary px-5 py-2.5">Request this service <i class="fas fa-arrow-right text-xs"></i></a>
+            <button data-close class="px-5 py-2.5 rounded-xl border border-white/20 text-slate-200 font-semibold hover:bg-white/5">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <script dangerouslySetInnerHTML={{ __html: `window.__SERVICES__ = ${JSON.stringify(svc)};` }} />
+      <script src="/static/services.js"></script>
     </PublicLayout>
   )
 })
@@ -515,20 +600,20 @@ publicRoutes.get('/events/:id', async (c) => {
 
 // ---------- LIVE HUB ----------
 publicRoutes.get('/live', async (c) => {
-  const [liveNow, upcoming, latest, highlights, channels, ytLive, ytUpcoming, ytRecent] = await Promise.all([
+  kickYouTubeSync(c.env)
+  const [liveNow, upcoming, latest, highlights, channels] = await Promise.all([
     c.env.DB.prepare(`SELECT le.*, e.name, e.sport, e.venue_name, e.id AS eid FROM live_events le JOIN events e ON e.id=le.event_id WHERE le.status='live' ORDER BY le.display_order`).all(),
     c.env.DB.prepare(`SELECT le.*, e.name, e.sport, e.start_date, e.id AS eid FROM live_events le JOIN events e ON e.id=le.event_id WHERE le.status='upcoming' ORDER BY le.scheduled_at LIMIT 6`).all(),
     c.env.DB.prepare(`SELECT m.* FROM media m WHERE m.status='approved' AND m.is_public=1 AND m.media_type IN ('video','highlight','reel','interview') ORDER BY m.created_at DESC LIMIT 8`).all(),
     c.env.DB.prepare(`SELECT m.* FROM media m WHERE m.status='approved' AND m.is_public=1 AND m.media_type='highlight' ORDER BY m.created_at DESC LIMIT 4`).all(),
     c.env.DB.prepare(`SELECT DISTINCT platform FROM live_events WHERE platform IS NOT NULL`).all(),
-    c.env.DB.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=1 ORDER BY sort_order LIMIT 1`).first(),
-    c.env.DB.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_upcoming=1 ORDER BY scheduled_at LIMIT 6`).all(),
-    c.env.DB.prepare(`SELECT * FROM youtube_videos WHERE is_active=1 AND is_live=0 AND is_upcoming=0 ORDER BY sort_order LIMIT 5`).all(),
   ])
+  const ytLiveArr = await ytRows(c.env.DB, `AND is_live=1`, 1)
+  const ytUp = await ytRows(c.env.DB, `AND is_upcoming=1`, 6)
+  const ytList = await ytRows(c.env.DB, `AND is_live=0 AND is_upcoming=0`, 5)
   const main = (liveNow.results as any[])[0]
-  const yt = ytLive as any
-  const ytUp = ytUpcoming.results as any[]
-  const ytList = ytRecent.results as any[]
+  const yt = ytLiveArr[0] as any
+  void channels
   return c.html(
     <PublicLayout user={c.get('user')} current="/live" title="Live">
       <PageHero eyebrow="Live Hub" title="Watch us live" subtitle="Current live broadcast, upcoming streams, and our latest matches from the AWADH Sports YouTube channel." />

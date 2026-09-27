@@ -90,8 +90,10 @@
         step2.classList.remove('hidden')
         step2.querySelector('[name=booking_code]').value = code
         var vmsg = document.getElementById('otp-ver-msg')
-        if (res.data.dev_otp) {
-          showMsg(vmsg, 'Demo OTP (no SMS provider configured): ' + res.data.dev_otp, 'info')
+        if (res.data.otp) {
+          showMsg(vmsg, 'Your OTP is ' + res.data.otp + ' — enter it below to open your booking.', 'success')
+          var otpInput = document.querySelector('#otp-verify-form [name=code]')
+          if (otpInput) { otpInput.value = res.data.otp; otpInput.focus() }
         }
       } catch (err) {
         showMsg(msg, (err.response && err.response.data && err.response.data.error) || 'Could not send OTP.', 'error')
@@ -107,7 +109,12 @@
       var code = form.querySelector('[name=booking_code]').value
       axios.post('/api/bookings/track/request-otp', { booking_code: code }).then(function (res) {
         var vmsg = document.getElementById('otp-ver-msg')
-        showMsg(vmsg, 'New OTP sent. ' + (res.data.dev_otp ? 'Demo OTP: ' + res.data.dev_otp : ''), 'info')
+        var text = 'New OTP sent.' + (res.data.otp ? ' Your OTP is ' + res.data.otp : '')
+        showMsg(vmsg, text, 'success')
+        if (res.data.otp) {
+          var otpInput = document.querySelector('#otp-verify-form [name=code]')
+          if (otpInput) otpInput.value = res.data.otp
+        }
       }).catch(function (err) {
         showMsg(document.getElementById('otp-ver-msg'), (err.response && err.response.data && err.response.data.error) || 'Could not resend.', 'error')
       })

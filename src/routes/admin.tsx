@@ -4,6 +4,8 @@ import { StaffLayout, Notice } from '../lib/staff_layout'
 import { Stat, Card, Table, Empty, Chip, Field, inputCls, btnPrimary, btnGhost, btnDanger } from '../lib/components'
 import { fmtDate, fmtDateTime, fmtMoney, esc, logActivity } from '../lib/utils'
 import { canAccess, hashPassword, type Module } from '../lib/auth'
+import { computeSalary, getSetting, parseClock, fmtClock } from '../lib/policy'
+import { syncYouTube } from '../lib/youtube'
 
 export const adminRoutes = new Hono<AppEnv>()
 
@@ -18,7 +20,7 @@ adminRoutes.use('*', async (c, next) => {
     '/roles': 'roles', '/events': 'events', '/live': 'live', '/tasks': 'tasks', '/equipment': 'equipment',
     '/media': 'media', '/portfolio': 'portfolio', '/reports': 'reports', '/notifications': 'notifications',
     '/cms': 'cms', '/logs': 'logs', '/settings': 'settings',
-    '/youtube': 'media', '/team': 'cms', '/users': 'employees', '/attendance': 'attendance',
+    '/youtube': 'media', '/team': 'cms', '/users': 'employees', '/attendance': 'attendance', '/salary': 'attendance',
   }
   const seg = '/' + (path.split('/').filter(Boolean)[0] || '')
   const mod = moduleMap[seg]
@@ -292,6 +294,13 @@ adminRoutes.post('/bookings/:id/message', async (c) => {
       .bind(id, user.full_name, String(f.message), visible).run()
     if (visible) {
       await c.env.DB.prepare(`UPDATE bookings SET status = CASE WHEN status='received' THEN 'discussion' ELSE status END, updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(id).run()
+      // Notify the customer (linked account) + leave a dashboard-visible update.
+      const b: any = await c.env.DB.prepare(`SELECT b.booking_code, b.contact_name, b.contact_email, c.user_id FROM bookings b LEFT JOIN customers c ON c.id=b.customer_id WHERE b.id=?`).bind(id).first()
+      if (b?.user_id) {
+        await c.env.DB.prepare(`INSERT INTO notifications (user_id, title, body, link, audience) VALUES (?,?,?,?, 'user')`)
+          .bind(b.user_id, `Reply on your booking ${b.booking_code}`, String(f.message).slice(0, 180), '/account').run()
+      }
+      await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'booking.reply', entity: 'bookings', entityId: id })
     }
   }
   return c.redirect(`/admin/bookings/${id}`)
@@ -342,8 +351,8 @@ adminRoutes.get('/customers', async (c) => {
       <div class="grid lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2">
           <h2 class="font-bold text-slate-900 mb-3">Customers</h2>
-          <Table cols={['Name', 'Contact', 'Organization', 'Bookings', 'Since']}>
-            {(customers.results as any[]).length === 0 && <tr><td colspan={5}><Empty icon="fa-users" title="No customers yet" /></td></tr>}
+          <Table cols={['Name', 'Contact', 'Organization', 'Bookings', 'Since', '']}>
+            {(customers.results as any[]).length === 0 && <tr><td colspan={6}><Empty icon="fa-users" title="No customers yet" /></td></tr>}
             {(customers.results as any[]).map((r) => (
               <tr class="hover:bg-slate-50">
                 <td class="px-4 py-3 font-medium text-slate-800">{esc(r.name)}</td>
@@ -351,6 +360,11 @@ adminRoutes.get('/customers', async (c) => {
                 <td class="px-4 py-3 text-slate-500">{esc(r.organization || '—')}</td>
                 <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">{r.bookings}</span></td>
                 <td class="px-4 py-3 text-slate-400 text-xs">{fmtDate(r.created_at)}</td>
+                <td class="px-4 py-3">
+                  <form method="post" action={`/admin/customers/${r.id}/delete`} onsubmit="return confirm('Delete this customer? Their bookings are kept but unlinked.')">
+                    <button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                  </form>
+                </td>
               </tr>
             ))}
           </Table>
@@ -371,6 +385,15 @@ adminRoutes.get('/customers', async (c) => {
       </div>
     </StaffLayout>
   )
+})
+
+adminRoutes.post('/customers/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`UPDATE bookings SET customer_id=NULL WHERE customer_id=?`).bind(id).run()
+  await c.env.DB.prepare(`DELETE FROM customers WHERE id=?`).bind(id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'customer.deleted', entity: 'customers', entityId: id })
+  return c.redirect('/admin/customers')
 })
 
 // ============================================================
@@ -409,24 +432,31 @@ adminRoutes.get('/employees', async (c) => {
               <Field label="Employee code"><input name="emp_code" class={inputCls} /></Field>
               <Field label="Department"><input name="department" class={inputCls} /></Field>
               <Field label="Designation"><input name="designation" class={inputCls} /></Field>
+              <Field label="Monthly salary (₹)" hint="Used for the salary sheet"><input name="monthly_salary" type="number" min="0" class={inputCls} /></Field>
               <Field label="Portal role">
                 <select name="role" class={inputCls}><option value="employee">Employee</option><option value="manager">Production Manager / Team Lead</option><option value="admin">Admin</option></select>
               </Field>
               <button class={btnPrimary + ' sm:col-span-2'}>Create employee</button>
             </form>
           </Card>
-          <Table cols={['Name', 'Email', 'Department', 'Role', 'Status', 'Actions']}>
+          <Table cols={['Name', 'Email', 'Department', 'Salary', 'Role', 'Status', 'Actions']}>
             {(rows.results as any[]).map((r) => (
               <tr class="hover:bg-slate-50">
                 <td class="px-4 py-3 font-medium text-slate-800">{esc(r.full_name)}<div class="text-xs font-mono text-slate-400">{esc(r.emp_code || '')}</div></td>
                 <td class="px-4 py-3 text-slate-500 text-xs">{esc(r.email)}</td>
                 <td class="px-4 py-3 text-slate-500">{esc(r.department || '—')}<div class="text-xs text-slate-400">{esc(r.designation || '')}</div></td>
+                <td class="px-4 py-3 text-slate-600 text-sm">{r.monthly_salary ? fmtMoney(r.monthly_salary) : '—'}</td>
                 <td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 capitalize">{esc(r.role)}</span></td>
                 <td class="px-4 py-3"><Chip status={r.is_active ? 'present' : 'absent'} label={r.is_active ? 'active' : 'inactive'} /></td>
                 <td class="px-4 py-3">
-                  <form method="post" action={`/admin/employees/${r.id}/toggle`}>
-                    <button class="text-xs font-semibold text-red-600 hover:underline">{r.is_active ? 'Deactivate' : 'Activate'}</button>
-                  </form>
+                  <div class="flex flex-col gap-1">
+                    <form method="post" action={`/admin/employees/${r.id}/toggle`}>
+                      <button class="text-xs font-semibold text-red-600 hover:underline">{r.is_active ? 'Deactivate' : 'Activate'}</button>
+                    </form>
+                    <form method="post" action={`/admin/employees/${r.id}/delete`} onsubmit="return confirm('Delete this employee and their login account? This cannot be undone.')">
+                      <button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -468,8 +498,9 @@ adminRoutes.post('/employees', async (c) => {
   const res = await c.env.DB.prepare(`INSERT INTO users (email, password_hash, role, full_name, phone, is_active) VALUES (?,?,?,?,?,1)`)
     .bind(email, hash, String(f.role || 'employee'), name, String(f.phone || '') || null).run()
   const uid = Number(res.meta.last_row_id)
-  await c.env.DB.prepare(`INSERT INTO employees (user_id, emp_code, department, designation, joining_date, status) VALUES (?,?,?,?,date('now'),'active')`)
-    .bind(uid, String(f.emp_code || '') || null, String(f.department || '') || null, String(f.designation || '') || null).run()
+  const salary = Number(f.monthly_salary || 0) || null
+  await c.env.DB.prepare(`INSERT INTO employees (user_id, emp_code, department, designation, joining_date, status, monthly_salary) VALUES (?,?,?,?,date('now'),'active',?)`)
+    .bind(uid, String(f.emp_code || '') || null, String(f.department || '') || null, String(f.designation || '') || null, salary).run()
   await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'employee.created', entity: 'users', entityId: uid, details: email })
   return c.redirect(`/admin/employees?created=${encodeURIComponent(email)}&pw=${encodeURIComponent(password)}`)
 })
@@ -478,6 +509,31 @@ adminRoutes.post('/employees/:id/toggle', async (c) => {
   const id = Number(c.req.param('id'))
   const emp: any = await c.env.DB.prepare(`SELECT user_id FROM employees WHERE id=?`).bind(id).first()
   if (emp) await c.env.DB.prepare(`UPDATE users SET is_active = 1 - is_active WHERE id=?`).bind(emp.user_id).run()
+  return c.redirect('/admin/employees')
+})
+
+// Update an employee's salary / department / designation in place.
+adminRoutes.post('/employees/:id', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  const f = await c.req.parseBody()
+  const salary = Number(f.monthly_salary || 0) || null
+  await c.env.DB.prepare(`UPDATE employees SET department=?, designation=?, emp_code=?, monthly_salary=? WHERE id=?`)
+    .bind(String(f.department || '') || null, String(f.designation || '') || null, String(f.emp_code || '') || null, salary, id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'employee.updated', entity: 'employees', entityId: id })
+  return c.redirect('/admin/employees')
+})
+
+// Delete an employee + their login account entirely.
+adminRoutes.post('/employees/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  const emp: any = await c.env.DB.prepare(`SELECT user_id FROM employees WHERE id=?`).bind(id).first()
+  if (emp) {
+    await c.env.DB.prepare(`DELETE FROM employees WHERE id=?`).bind(id).run()
+    await c.env.DB.prepare(`DELETE FROM users WHERE id=? AND role IN ('employee','manager')`).bind(emp.user_id).run()
+    await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'employee.deleted', entity: 'employees', entityId: id })
+  }
   return c.redirect('/admin/employees')
 })
 
@@ -687,6 +743,14 @@ adminRoutes.post('/events/:id/team', async (c) => {
 adminRoutes.post('/events/:id/team/:tid/remove', async (c) => {
   await c.env.DB.prepare(`DELETE FROM event_team WHERE id=?`).bind(Number(c.req.param('tid'))).run()
   return c.redirect(`/admin/events/${c.req.param('id')}`)
+})
+
+adminRoutes.post('/events/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`DELETE FROM events WHERE id=?`).bind(id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'event.deleted', entity: 'events', entityId: id })
+  return c.redirect('/admin/events')
 })
 
 adminRoutes.post('/events/:id/schedule', async (c) => {
@@ -982,10 +1046,11 @@ adminRoutes.get('/media', async (c) => {
             <td class="px-4 py-3"><Chip status={m.status === 'approved' ? 'completed' : m.status === 'rejected' ? 'cancelled' : 'pending'} label={m.status} /></td>
             <td class="px-4 py-3">{m.is_public ? <i class="fas fa-eye text-emerald-500"></i> : <i class="fas fa-eye-slash text-slate-300"></i>}</td>
             <td class="px-4 py-3">
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 {m.status !== 'approved' && <form method="post" action={`/admin/media/${m.id}/approve`}><button class="text-xs font-semibold text-emerald-600 hover:underline">Approve</button></form>}
                 {m.status !== 'rejected' && <form method="post" action={`/admin/media/${m.id}/reject`}><button class="text-xs font-semibold text-rose-600 hover:underline">Reject</button></form>}
                 <form method="post" action={`/admin/media/${m.id}/toggle-public`}><button class="text-xs font-semibold text-slate-500 hover:underline">{m.is_public ? 'Unpublish' : 'Publish'}</button></form>
+                <form method="post" action={`/admin/media/${m.id}/delete`} onsubmit="return confirm('Delete this media item?')"><button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button></form>
               </div>
             </td>
           </tr>
@@ -1012,6 +1077,14 @@ adminRoutes.post('/media/:id/reject', async (c) => {
 })
 adminRoutes.post('/media/:id/toggle-public', async (c) => {
   await c.env.DB.prepare(`UPDATE media SET is_public = 1 - is_public WHERE id=?`).bind(Number(c.req.param('id'))).run()
+  return c.redirect('/admin/media')
+})
+
+adminRoutes.post('/media/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`DELETE FROM media WHERE id=?`).bind(id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'media.deleted', entity: 'media', entityId: id })
   return c.redirect('/admin/media')
 })
 
@@ -1059,7 +1132,12 @@ adminRoutes.get('/portfolio', async (c) => {
             <td class="px-4 py-3 text-slate-500">{esc(p.sport || '—')}</td>
             <td class="px-4 py-3 text-slate-500">{esc(p.client || '—')}</td>
             <td class="px-4 py-3">{p.is_published ? <i class="fas fa-eye text-emerald-500"></i> : <i class="fas fa-eye-slash text-slate-300"></i>}</td>
-            <td class="px-4 py-3"><form method="post" action={`/admin/portfolio/${p.id}/toggle`}><button class="text-xs font-semibold text-slate-500 hover:underline">{p.is_published ? 'Unpublish' : 'Publish'}</button></form></td>
+            <td class="px-4 py-3">
+              <div class="flex gap-2">
+                <form method="post" action={`/admin/portfolio/${p.id}/toggle`}><button class="text-xs font-semibold text-slate-500 hover:underline">{p.is_published ? 'Unpublish' : 'Publish'}</button></form>
+                <form method="post" action={`/admin/portfolio/${p.id}/delete`} onsubmit="return confirm('Delete this project?')"><button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button></form>
+              </div>
+            </td>
           </tr>
         ))}
       </Table>
@@ -1070,7 +1148,12 @@ adminRoutes.get('/portfolio', async (c) => {
             <td class="px-4 py-3 font-medium text-slate-800">{esc(s.title)}</td>
             <td class="px-4 py-3 text-slate-500 font-mono text-xs">{esc(s.slug)}</td>
             <td class="px-4 py-3"><Chip status={s.is_active ? 'present' : 'absent'} label={s.is_active ? 'active' : 'inactive'} /></td>
-            <td class="px-4 py-3"><form method="post" action={`/admin/services/${s.id}/toggle`}><button class="text-xs font-semibold text-slate-500 hover:underline">{s.is_active ? 'Disable' : 'Enable'}</button></form></td>
+            <td class="px-4 py-3">
+              <div class="flex gap-2">
+                <form method="post" action={`/admin/services/${s.id}/toggle`}><button class="text-xs font-semibold text-slate-500 hover:underline">{s.is_active ? 'Disable' : 'Enable'}</button></form>
+                <form method="post" action={`/admin/services/${s.id}/delete`} onsubmit="return confirm('Delete this service?')"><button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button></form>
+              </div>
+            </td>
           </tr>
         ))}
       </Table>
@@ -1090,6 +1173,14 @@ adminRoutes.post('/portfolio/:id/toggle', async (c) => {
   return c.redirect('/admin/portfolio')
 })
 
+adminRoutes.post('/portfolio/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`DELETE FROM portfolio WHERE id=?`).bind(id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'portfolio.deleted', entity: 'portfolio', entityId: id })
+  return c.redirect('/admin/portfolio')
+})
+
 adminRoutes.post('/services', async (c) => {
   const f = await c.req.parseBody()
   const slug = String(f.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -1100,6 +1191,15 @@ adminRoutes.post('/services', async (c) => {
 
 adminRoutes.post('/services/:id/toggle', async (c) => {
   await c.env.DB.prepare(`UPDATE services SET is_active = 1 - is_active WHERE id=?`).bind(Number(c.req.param('id'))).run()
+  return c.redirect('/admin/portfolio')
+})
+
+adminRoutes.post('/services/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  await c.env.DB.prepare(`DELETE FROM booking_services WHERE service_id=?`).bind(id).run()
+  await c.env.DB.prepare(`DELETE FROM services WHERE id=?`).bind(id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'service.deleted', entity: 'services', entityId: id })
   return c.redirect('/admin/portfolio')
 })
 
@@ -1361,11 +1461,16 @@ adminRoutes.post('/settings', async (c) => {
 adminRoutes.get('/youtube', async (c) => {
   const user = c.get('user')!
   const rows = await c.env.DB.prepare(`SELECT * FROM youtube_videos ORDER BY is_live DESC, is_upcoming DESC, sort_order`).all()
+  const lastSync = await getSetting(c.env, 'youtube_last_sync', '')
+  const synced = c.req.query('synced')
+  const syncErr = c.req.query('syncerr')
   return c.html(
     <StaffLayout user={user} nav="admin" current="/admin/youtube" title="YouTube Videos">
       <Notice type="info">
-        Videos shown here appear on the Live hub, Gallery and Home page. Paste a YouTube URL or video ID — the title and thumbnail are fetched automatically from YouTube.
+        Videos shown here appear on the Live hub, Gallery and Home page. Paste a YouTube URL or video ID — the title and thumbnail are fetched automatically from YouTube. Use <b>Sync now</b> to pull the latest uploads and the current LIVE / scheduled stream straight from the channel.
       </Notice>
+      {synced && <Notice type="success"><b>Sync complete.</b> The latest videos and live/upcoming state were pulled from the channel.</Notice>}
+      {syncErr && <Notice type="error">Sync failed: {esc(syncErr)}. Please try again later.</Notice>}
       <div class="grid lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2">
           <Table cols={['Video', 'Category', 'State', 'Order', 'Actions']}>
@@ -1388,6 +1493,7 @@ adminRoutes.get('/youtube', async (c) => {
                     {v.is_upcoming === 1 && <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold w-fit">Upcoming</span>}
                     {v.is_live === 0 && v.is_upcoming === 0 && <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold w-fit">Published</span>}
                     {v.is_active === 0 && <span class="text-xs px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold w-fit">Hidden</span>}
+                    {v.source === 'sync' && <span class="text-[10px] text-slate-400 w-fit">auto-synced</span>}
                   </div>
                 </td>
                 <td class="px-4 py-3 text-slate-500 text-sm">{v.sort_order}</td>
@@ -1431,9 +1537,19 @@ adminRoutes.get('/youtube', async (c) => {
             </form>
           </Card>
           <Card class="p-5 bg-white">
-            <h3 class="font-bold text-slate-900 mb-2 flex items-center gap-2"><i class="fab fa-youtube text-red-600"></i> Channel</h3>
-            <p class="text-sm text-slate-500">Videos are published from the AWADH Sports YouTube channel.</p>
+            <h3 class="font-bold text-slate-900 mb-2 flex items-center gap-2"><i class="fab fa-youtube text-red-600"></i> Auto-sync from channel</h3>
+            <p class="text-sm text-slate-500 mb-3">Pull the latest uploads and any LIVE / scheduled stream straight from the AWADH Sports YouTube channel. The Live hub and Upcoming list also refresh automatically on their own.</p>
+            <form method="post" action="/admin/youtube/sync" class="mb-3">
+              <button class={btnPrimary + ' w-full'}><i class="fas fa-rotate"></i> Sync now</button>
+            </form>
+            <div class="flex items-center gap-1 text-sm mb-2">
+              <span class="text-slate-500">Channel:</span>
+            </div>
+            <input type="text" value="awadh_sports" class="w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 mb-2" disabled />
             <a href="https://youtube.com/@awadh_sports." target="_blank" rel="noopener" class="text-sm text-red-600 font-semibold hover:underline">Open channel →</a>
+            {(await getSetting(c.env, 'youtube_last_sync', '')) && (
+              <p class="text-xs text-slate-400 mt-2"><i class="fas fa-clock mr-1"></i>Last synced: {esc(await getSetting(c.env, 'youtube_last_sync', ''))} UTC</p>
+            )}
           </Card>
         </div>
       </div>
@@ -1511,6 +1627,14 @@ adminRoutes.post('/youtube/:id/delete', async (c) => {
   await c.env.DB.prepare(`DELETE FROM youtube_videos WHERE id=?`).bind(id).run()
   await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'youtube.deleted', entity: 'youtube_videos', entityId: id })
   return c.redirect('/admin/youtube')
+})
+
+// Pull the latest videos + live/upcoming state from the public YouTube channel.
+adminRoutes.post('/youtube/sync', async (c) => {
+  const user = c.get('user')!
+  const result = await syncYouTube(c.env, { force: true })
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'youtube.sync', details: JSON.stringify(result).slice(0, 200) })
+  return c.redirect(`/admin/youtube?${result.ok ? 'synced=1' : 'syncerr=' + encodeURIComponent(result.error || 'failed')}`)
 })
 
 // ============================================================
@@ -1798,5 +1922,106 @@ adminRoutes.get('/attendance/export', async (c) => {
     .join('\n')
   return new Response(head + body, {
     headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="attendance-${day}.csv"` },
+  })
+})
+
+// ============================================================
+// SALARY — monthly sheet with half-day / absent deductions
+// ============================================================
+adminRoutes.get('/salary', async (c) => {
+  const user = c.get('user')!
+  const month = c.req.query('month') || new Date().toISOString().slice(0, 7)
+  const workingDays = Number(await getSetting(c.env, 'salary_working_days', '30')) || 30
+  const rows = await c.env.DB.prepare(
+    `SELECT e.id, e.emp_code, e.department, e.designation, e.monthly_salary, e.status AS emp_status,
+            u.full_name, u.email,
+            (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND a.status='present' AND strftime('%Y-%m', a.work_date)=?) AS present,
+            (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND a.status='half_day' AND strftime('%Y-%m', a.work_date)=?) AS half_day,
+            (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND a.status='absent' AND strftime('%Y-%m', a.work_date)=?) AS absent,
+            (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND a.status='late' AND strftime('%Y-%m', a.work_date)=?) AS late,
+            (SELECT COUNT(*) FROM leave_requests l WHERE l.employee_id=e.id AND l.status='approved' AND strftime('%Y-%m', l.from_date)=?) AS leave_days
+       FROM employees e JOIN users u ON u.id=e.user_id
+      ORDER BY u.full_name`
+  ).bind(month, month, month, month, month).all()
+
+  const list = (rows.results as any[]).map((r) => {
+    const s = computeSalary({
+      monthlySalary: r.monthly_salary,
+      workingDays,
+      present: r.present || 0,
+      halfDay: r.half_day || 0,
+      absent: r.absent || 0,
+      leave: r.leave_days || 0,
+    })
+    return { ...r, ...s }
+  })
+  const totalNet = list.reduce((s, r) => s + r.netPay, 0)
+  const totalDed = list.reduce((s, r) => s + r.deduction, 0)
+
+  return c.html(
+    <StaffLayout user={user} nav="admin" current="/admin/salary" title="Salary">
+      <Notice type="info">
+        Monthly salary sheet. An employee who checks in after the cut-off (<b>{fmtClock(parseClock(await getSetting(c.env, 'attendance_checkin_cutoff', '09:00')))}</b>) is marked a <b>half day</b>, and absences/half-days are deducted automatically.
+      </Notice>
+      <Card class="p-4 mb-6">
+        <form method="get" action="/admin/salary" class="flex flex-wrap items-end gap-3">
+          <Field label="Month"><input type="month" name="month" value={month} class={inputCls} /></Field>
+          <button class={btnPrimary}>Load</button>
+          <a href={`/admin/salary/export?month=${month}`} class={btnGhost}><i class="fas fa-file-csv"></i> Export CSV</a>
+        </form>
+        <div class="grid sm:grid-cols-3 gap-4 mt-4">
+          <Stat label="Employees" value={list.length} icon="fa-users" tone="bg-slate-100 text-slate-600" />
+          <Stat label="Total deductions" value={fmtMoney(totalDed)} icon="fa-arrow-trend-down" tone="bg-rose-50 text-rose-600" />
+          <Stat label="Total net payable" value={fmtMoney(totalNet)} icon="fa-indian-rupee-sign" tone="bg-emerald-50 text-emerald-600" />
+        </div>
+      </Card>
+      <Table cols={['Employee', 'Per day', 'Present', 'Half day', 'Absent', 'Leave', 'Deduction', 'Net payable', '']}>
+        {list.length === 0 && <tr><td colspan={9}><Empty icon="fa-indian-rupee-sign" title="No employees yet" /></td></tr>}
+        {list.map((r) => (
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-medium text-slate-800">{esc(r.full_name)}<div class="text-xs text-slate-400">{esc(r.department || '')} {r.emp_code ? `· ${esc(r.emp_code)}` : ''}</div></td>
+            <td class="px-4 py-3 text-slate-500 text-sm">{r.configured ? fmtMoney(r.perDay) : '—'}</td>
+            <td class="px-4 py-3 text-emerald-600 font-semibold">{r.present}</td>
+            <td class="px-4 py-3 text-orange-600 font-semibold">{r.halfDay}</td>
+            <td class="px-4 py-3 text-rose-600 font-semibold">{r.absent}</td>
+            <td class="px-4 py-3 text-blue-600 font-semibold">{r.leave}</td>
+            <td class="px-4 py-3 text-rose-600">{r.configured ? '−' + fmtMoney(r.deduction) : '—'}</td>
+            <td class="px-4 py-3 font-bold text-slate-900">{r.configured ? fmtMoney(r.netPay) : <span class="text-xs text-slate-400">set salary</span>}</td>
+            <td class="px-4 py-3">
+              <form method="post" action={`/admin/employees/${r.id}`} class="flex items-center gap-1">
+                <input name="monthly_salary" type="number" min="0" value={r.monthly_salary || ''} placeholder="Salary" class="w-24 text-sm rounded-lg border border-slate-300 px-2 py-1" />
+                <input type="hidden" name="department" value={r.department || ''} />
+                <input type="hidden" name="designation" value={r.designation || ''} />
+                <input type="hidden" name="emp_code" value={r.emp_code || ''} />
+                <button class="text-xs px-2 py-1 rounded-lg bg-slate-900 text-white font-medium">Save</button>
+              </form>
+            </td>
+          </tr>
+        ))}
+      </Table>
+    </StaffLayout>
+  )
+})
+
+adminRoutes.get('/salary/export', async (c) => {
+  const month = c.req.query('month') || new Date().toISOString().slice(0, 7)
+  const workingDays = Number(await getSetting(c.env, 'salary_working_days', '30')) || 30
+  const rows = await c.env.DB.prepare(
+    `SELECT e.emp_code, e.department, e.monthly_salary, u.full_name, u.email,
+            (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND a.status='present' AND strftime('%Y-%m', a.work_date)=?) AS present,
+            (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND a.status='half_day' AND strftime('%Y-%m', a.work_date)=?) AS half_day,
+            (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND a.status='absent' AND strftime('%Y-%m', a.work_date)=?) AS absent
+       FROM employees e JOIN users u ON u.id=e.user_id ORDER BY u.full_name`
+  ).bind(month, month, month).all()
+  const head = 'Name,Email,Code,Department,Month,Salary,Present,HalfDay,Absent,PerDay,Deduction,NetPayable\n'
+  const body = (rows.results as any[])
+    .map((r) => {
+      const s = computeSalary({ monthlySalary: r.monthly_salary, workingDays, present: r.present || 0, halfDay: r.half_day || 0, absent: r.absent || 0, leave: 0 })
+      return [r.full_name, r.email, r.emp_code, r.department, month, r.monthly_salary || 0, r.present || 0, r.half_day || 0, r.absent || 0, s.perDay, s.deduction, s.netPay]
+        .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
+    })
+    .join('\n')
+  return new Response(head + body, {
+    headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="salary-${month}.csv"` },
   })
 })

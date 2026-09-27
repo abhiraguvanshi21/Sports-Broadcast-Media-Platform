@@ -3,6 +3,7 @@ import type { AppEnv } from '../lib/types'
 import { makeBookingCode, esc, rateLimit } from '../lib/utils'
 import { createBookingOtp, verifyOtp, normalizePhone, maskPhone, maskEmail } from '../lib/otp'
 import { logActivity } from '../lib/utils'
+import { istNow, parseClock, classifyCheckin, getSetting, fmtClock } from '../lib/policy'
 
 export const apiRoutes = new Hono<AppEnv>()
 
@@ -88,9 +89,8 @@ apiRoutes.post('/bookings/track/request-otp', async (c) => {
   const { destination, devCode } = await createBookingOtp(c.env, booking.id, booking.contact_phone, booking.contact_email)
   await logActivity(c.env.DB, { action: 'otp.requested', entity: 'bookings', entityId: booking.id, ip: ip(c) })
 
-  // In this environment there is no SMS/email provider configured, so we return
-  // the OTP for immediate verification (demo). Integrate a provider to send it.
-  return c.json({ ok: true, destination, dev_otp: devCode })
+  // The OTP is shown directly on screen so the customer can use it right away.
+  return c.json({ ok: true, destination, otp: devCode })
 })
 
 apiRoutes.post('/bookings/track/verify', async (c) => {
@@ -183,28 +183,30 @@ apiRoutes.post('/careers/apply', async (c) => {
 apiRoutes.post('/attendance/checkin', async (c) => {
   const user = c.get('user')
   if (!user?.employee_id) return c.json({ error: 'Not an employee' }, 403)
-  const today = new Date().toISOString().slice(0, 10)
+  const now = istNow()
+  const today = now.date
   const existing: any = await c.env.DB.prepare(`SELECT id FROM attendance WHERE employee_id=? AND work_date=?`).bind(user.employee_id, today).first()
   if (existing) return c.json({ error: 'Already checked in today.' }, 400)
-  const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
-  const hh = new Date().getHours()
-  const status = hh >= 10 ? 'late' : 'present'
-  await c.env.DB.prepare(`INSERT INTO attendance (employee_id, work_date, check_in, status) VALUES (?,?,?,?)`)
-    .bind(user.employee_id, today, now, status).run()
-  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'attendance.checkin', ip: ip(c) })
-  return c.json({ ok: true, status })
+
+  // Policy: check-in after the cutoff (default 09:00 AM IST) => half day.
+  const cutoff = parseClock(await getSetting(c.env, 'attendance_checkin_cutoff', '09:00'))
+  const status = classifyCheckin(now.minutes, cutoff)
+  await c.env.DB.prepare(`INSERT INTO attendance (employee_id, work_date, check_in, status, notes) VALUES (?,?,?,?,?)`)
+    .bind(user.employee_id, today, now.stamp, status, status === 'half_day' ? `Half day — checked in after ${fmtClock(cutoff)}` : null).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'attendance.checkin', details: status, ip: ip(c) })
+  return c.json({ ok: true, status, check_in: now.stamp, cutoff: fmtClock(cutoff) })
 })
 
 apiRoutes.post('/attendance/checkout', async (c) => {
   const user = c.get('user')
   if (!user?.employee_id) return c.json({ error: 'Not an employee' }, 403)
-  const today = new Date().toISOString().slice(0, 10)
-  const now = new Date().toISOString().replace('T', ' ').slice(0, 19)
+  const now = istNow()
+  // Check-out simply records the actual time — no restriction on when.
   const res = await c.env.DB.prepare(`UPDATE attendance SET check_out=? WHERE employee_id=? AND work_date=? AND check_out IS NULL`)
-    .bind(now, user.employee_id, today).run()
+    .bind(now.stamp, user.employee_id, now.date).run()
   if (!res.meta.changes) return c.json({ error: 'No active check-in found.' }, 400)
   await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'attendance.checkout', ip: ip(c) })
-  return c.json({ ok: true })
+  return c.json({ ok: true, check_out: now.stamp })
 })
 
 // ============================================================

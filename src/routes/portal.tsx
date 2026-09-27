@@ -28,12 +28,14 @@ portalRoutes.get('/', async (c) => {
     c.env.DB.prepare(`SELECT COUNT(*) n FROM leave_requests WHERE employee_id=? AND status='pending'`).bind(empId).first<any>(),
   ])
   const openTasks = await c.env.DB.prepare(`SELECT COUNT(*) n FROM tasks WHERE assigned_to=? AND status NOT IN ('completed','cancelled')`).bind(empId).first<any>()
-  const monthPresent = await c.env.DB.prepare(`SELECT COUNT(*) n FROM attendance WHERE employee_id=? AND status IN ('present','late') AND strftime('%Y-%m', work_date)=strftime('%Y-%m','now')`).bind(empId).first<any>()
+  const monthPresent = await c.env.DB.prepare(`SELECT COUNT(*) n FROM attendance WHERE employee_id=? AND status IN ('present','half_day','late') AND strftime('%Y-%m', work_date)=strftime('%Y-%m','now')`).bind(empId).first<any>()
+  const attStatus = att ? (att as any).status : null
+  const attLabel = attStatus === 'half_day' ? 'Half day' : attStatus === 'late' ? 'Late' : attStatus ? 'Present' : 'Not checked in'
 
   return c.html(
     <StaffLayout user={user} nav="portal" current="/portal" title="Dashboard">
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Stat label="Today" value={att ? (att as any).status === 'late' ? 'Late' : 'Present' : 'Not checked in'} icon="fa-fingerprint" sub={att ? `In: ${(att as any).check_in ? fmtDateTime((att as any).check_in).split(', ')[1] : '—'}` : 'Check in below'} />
+        <Stat label="Today" value={attLabel} icon="fa-fingerprint" sub={att ? `In: ${(att as any).check_in ? (att as any).check_in.slice(11, 16) : '—'}` : 'Check in below'} />
         <Stat label="Open tasks" value={openTasks?.n ?? 0} icon="fa-list-check" tone="bg-cyan-50 text-cyan-600" />
         <Stat label="This month present" value={monthPresent?.n ?? 0} icon="fa-calendar-check" tone="bg-emerald-50 text-emerald-600" />
         <Stat label="Pending leave" value={leaves?.n ?? 0} icon="fa-plane-departure" tone="bg-amber-50 text-amber-600" />
@@ -124,23 +126,28 @@ portalRoutes.get('/attendance', async (c) => {
   const summary = await c.env.DB.prepare(
     `SELECT
        SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) present,
+       SUM(CASE WHEN status='half_day' THEN 1 ELSE 0 END) half_day,
        SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) absent,
        SUM(CASE WHEN status='late' THEN 1 ELSE 0 END) late
      FROM attendance WHERE employee_id=? AND strftime('%Y-%m', work_date)=strftime('%Y-%m','now')`
   ).bind(user.employee_id).first<any>()
   return c.html(
     <StaffLayout user={user} nav="portal" current="/portal/attendance" title="Attendance">
-      <div class="grid sm:grid-cols-3 gap-4 mb-6">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Stat label="Present this month" value={summary?.present ?? 0} icon="fa-check" tone="bg-emerald-50 text-emerald-600" />
-        <Stat label="Late this month" value={summary?.late ?? 0} icon="fa-clock" tone="bg-amber-50 text-amber-600" />
+        <Stat label="Half days" value={summary?.half_day ?? 0} icon="fa-circle-half-stroke" tone="bg-orange-50 text-orange-600" />
         <Stat label="Absent this month" value={summary?.absent ?? 0} icon="fa-xmark" tone="bg-rose-50 text-rose-600" />
+        <Stat label="Late check-ins" value={summary?.late ?? 0} icon="fa-clock" tone="bg-amber-50 text-amber-600" />
+      </div>
+      <div class="mb-5 rounded-2xl bg-white/60 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+        <i class="fas fa-circle-info text-red-500 mr-1"></i> Check-in after <b>9:00 AM</b> is marked a <b>half day</b>, which reduces the payable salary for that day. Check-out records your actual departure time.
       </div>
       <Table cols={['Date', 'Check In', 'Check Out', 'Status', 'Notes']}>
         {(rows.results as any[]).map((r) => (
           <tr class="hover:bg-slate-50">
             <td class="px-4 py-3 font-medium text-slate-700">{fmtDate(r.work_date)}</td>
-            <td class="px-4 py-3 text-slate-500">{r.check_in ? fmtDateTime(r.check_in).split(', ')[1] : '—'}</td>
-            <td class="px-4 py-3 text-slate-500">{r.check_out ? fmtDateTime(r.check_out).split(', ')[1] : '—'}</td>
+            <td class="px-4 py-3 text-slate-500">{r.check_in ? String(r.check_in).slice(11, 16) : '—'}</td>
+            <td class="px-4 py-3 text-slate-500">{r.check_out ? String(r.check_out).slice(11, 16) : '—'}</td>
             <td class="px-4 py-3"><Chip status={r.status} /></td>
             <td class="px-4 py-3 text-slate-400">{esc(r.notes || '')}</td>
           </tr>
