@@ -50,7 +50,11 @@ publicRoutes.get('/', async (c) => {
       {/* HERO */}
       <section class="relative overflow-hidden">
         <div class="absolute inset-0 opacity-30" style="background-image:radial-gradient(circle at 15% 10%, #ef4444 0, transparent 35%),radial-gradient(circle at 85% 20%, #f97316 0, transparent 30%)"></div>
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20 grid lg:grid-cols-2 gap-12 items-center">
+        {/* Giant service word pulsing behind the hero (no box) */}
+        <div class="hero-ghost" aria-hidden="true">
+          <div class="hero-ghost__word" id="hero-ghost-word">{(services.results as any[])[0]?.title || 'Live Sports Production'}</div>
+        </div>
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20 grid lg:grid-cols-2 gap-12 items-center">
           <div>
             {liveNow ? (
               <a href="/live" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/15 border border-red-500/40 text-red-400 text-sm font-semibold mb-5">
@@ -101,35 +105,26 @@ publicRoutes.get('/', async (c) => {
         </div>
       </section>
 
-      {/* ANIMATED SERVICES SHOWCASE — each service slides in &amp; out, then the brand takes the stage. Loops. */}
-      <section class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-4">
-        <div class="showcase" id="showcase">
-          <div class="showcase__stage" id="showcase-stage">
-            {(services.results as any[]).length > 0 ? (
-              <>
-                {(services.results as any[]).map((s, i) => (
-                  <div class="showcase__item" data-idx={i}>
-                    <span class="showcase__icon"><i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i></span>
-                    <h2 class="showcase__title">{esc(s.title)}</h2>
-                    <p class="showcase__desc">{esc(s.short_desc || '')}</p>
-                    <span class="showcase__bar"><span></span></span>
-                  </div>
-                ))}
-                <div class="showcase__brand">
-                  <div class="showcase__brand-word">AWADH SPORTS</div>
-                  <div class="showcase__brand-sub">Live</div>
-                  <div class="showcase__brand-tag">Every sport. Every moment. Live.</div>
-                </div>
-              </>
-            ) : (
-              <div class="showcase__item is-active">
-                <div class="showcase__brand-word">AWADH SPORTS</div>
-                <div class="showcase__brand-sub">Live</div>
-              </div>
-            )}
-          </div>
+      {/* SERVICE MARQUEE — full-width scrolling capability band (no box) */}
+      <section class="brand-marquee" aria-label="Our services">
+        <div class="brand-marquee__track" id="brand-marquee-track">
+          {[...(services.results as any[]), ...(services.results as any[])].map((s) => (
+            <>
+              <span class="brand-marquee__item">
+                <i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i> {esc(s.title)}
+              </span>
+              <span class="brand-marquee__sep">✦</span>
+            </>
+          ))}
+          {[...(services.results as any[]), ...(services.results as any[])].map((s) => (
+            <>
+              <span class="brand-marquee__item">
+                <i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i> {esc(s.title)}
+              </span>
+              <span class="brand-marquee__sep">✦</span>
+            </>
+          ))}
         </div>
-        <div class="showcase__dots" id="showcase-dots" hidden></div>
       </section>
 
       {/* SERVICES */}
@@ -269,6 +264,7 @@ publicRoutes.get('/', async (c) => {
         </div>
       </section>
 
+      <script dangerouslySetInnerHTML={{ __html: `window.__HOME_SERVICES__=${JSON.stringify((services.results as any[]).map((s) => s.title))};` }}></script>
       <script src="/static/home-anim.js"></script>
     </PublicLayout>
   )

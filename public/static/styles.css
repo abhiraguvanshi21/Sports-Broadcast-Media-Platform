@@ -200,73 +200,67 @@ select.form-dark {
 @keyframes svcPop { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 /* ============================================================
-   HOME — animated services showcase
-   Each service slides in, holds, slides out; then the AWADH
-   SPORTS wordmark takes the stage. Loops forever.
+   HOME — services animation, full-bleed (no box)
+   1) .brand-marquee  : infinite scrolling capability band (top)
+   2) .hero-ghost     : giant service word pulsing behind the hero
    ============================================================ */
-.showcase {
+
+/* --- 1. Infinite marquee band --- */
+.brand-marquee {
   position: relative;
-  display: flex; align-items: center; justify-content: center;
-  min-height: 320px;
-  padding: 2rem 1.25rem;
   overflow: hidden;
-  border-radius: 1.75rem;
-  border: 1px solid var(--line);
-  background:
-    radial-gradient(600px 300px at 50% 0%, rgba(255, 61, 0, 0.14), transparent 70%),
-    linear-gradient(180deg, rgba(20, 22, 33, 0.85), rgba(9, 10, 18, 0.9));
-  transition: background .6s ease, border-color .6s ease, box-shadow .6s ease;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(90deg, rgba(255, 61, 0, 0.08), rgba(34, 211, 238, 0.06), rgba(139, 92, 246, 0.08));
+  padding: .9rem 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
-.showcase__stage { position: relative; width: 100%; max-width: 46rem; text-align: center; }
+.brand-marquee__track {
+  display: flex; align-items: center; gap: 2.6rem;
+  width: max-content;
+  animation: marqueeScroll 34s linear infinite;
+}
+.brand-marquee:hover .brand-marquee__track { animation-play-state: paused; }
+.brand-marquee__item {
+  display: inline-flex; align-items: center; gap: .6rem;
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(1rem, 2.2vw, 1.5rem);
+  font-weight: 700; letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  transition: color .2s ease;
+}
+.brand-marquee__item:hover { color: #fff; }
+.brand-marquee__item i { font-size: .6em; color: var(--brand-2); }
+.brand-marquee__sep { color: rgba(255, 255, 255, 0.18); font-size: 1.4rem; }
+@keyframes marqueeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-.showcase__item {
+/* --- 2. Giant service word behind the hero --- */
+.hero-ghost {
   position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.1rem;
-  opacity: 0; visibility: hidden; transform: translateY(26px) scale(.96);
-  transition: opacity .55s ease, transform .55s cubic-bezier(.2, .9, .3, 1.05), visibility .55s;
-}
-.showcase__item.is-active { position: relative; opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
-
-.showcase__icon {
-  width: 5.25rem; height: 5.25rem; border-radius: 1.5rem;
   display: flex; align-items: center; justify-content: center;
-  font-size: 2.2rem; color: #fff;
-  background-image: var(--flame-grad);
-  box-shadow: 0 16px 40px rgba(255, 61, 0, 0.4);
-  animation: iconBob 3.4s ease-in-out infinite;
+  pointer-events: none; user-select: none; overflow: hidden; z-index: 0;
 }
-.showcase__item:nth-child(even) .showcase__icon { background-image: var(--cool-grad); box-shadow: 0 16px 40px rgba(34, 211, 238, 0.35); }
-@keyframes iconBob { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-8px) rotate(-3deg); } }
-
-.showcase__title { font-family: 'Sora', sans-serif; font-size: clamp(1.5rem, 4vw, 2.4rem); font-weight: 800; color: #fff; line-height: 1.1; }
-.showcase__desc { color: var(--muted); max-width: 34rem; margin: 0 auto; font-size: .98rem; }
-
-.showcase__bar {
-  width: min(16rem, 70%); height: 4px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1); overflow: hidden;
+.hero-ghost__word {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800; letter-spacing: -0.03em;
+  font-size: clamp(3.5rem, 15vw, 13rem);
+  line-height: .9; text-align: center;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.10);
+  text-stroke: 1.5px rgba(255, 255, 255, 0.10);
+  opacity: 0;
+  transform: scale(.94) translateY(14px);
+  transition: opacity .7s ease, transform .7s cubic-bezier(.2, .9, .3, 1.05);
+  white-space: nowrap;
 }
-.showcase__bar > span { display: block; height: 100%; width: 0; background-image: var(--flame-grad); animation: barFill 3.2s linear forwards; }
-@keyframes barFill { from { width: 0; } to { width: 100%; } }
-
-.showcase__brand { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .75rem; opacity: 0; visibility: hidden; transform: scale(.9); transition: opacity .6s ease, transform .6s ease, visibility .6s; }
-.showcase__brand.is-active { position: relative; opacity: 1; visibility: visible; transform: scale(1); }
-.showcase__brand-word {
-  font-family: 'Sora', sans-serif; font-weight: 800; letter-spacing: .04em;
-  font-size: clamp(2.1rem, 8vw, 4.6rem); line-height: 1;
-  background-image: var(--flame-grad);
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  animation: brandGlow 2.6s ease-in-out infinite;
+.hero-ghost__word.is-on { opacity: 1; transform: scale(1) translateY(0); }
+.hero-ghost__word.is-flame {
+  -webkit-text-stroke: 1.5px rgba(255, 122, 0, 0.34);
+  text-stroke: 1.5px rgba(255, 122, 0, 0.34);
+  filter: drop-shadow(0 0 34px rgba(255, 61, 0, 0.22));
 }
-.showcase__brand-sub { letter-spacing: .5em; text-transform: uppercase; font-weight: 700; font-size: clamp(.7rem, 2vw, 1rem); color: #fff; padding-left: .5em; }
-.showcase__brand-tag { color: var(--muted); font-size: .95rem; }
-@keyframes brandGlow {
-  0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 61, 0, 0)); }
-  50% { filter: drop-shadow(0 0 22px rgba(255, 122, 0, 0.65)); }
-}
-.showcase__dots { display: flex; gap: .45rem; justify-content: center; margin-top: 1.6rem; }
-.showcase__dots i { width: 8px; height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.22); transition: all .3s ease; }
-.showcase__dots i.on { width: 22px; background-image: var(--flame-grad); }
 
 /* ============================================================
    Reduced motion
