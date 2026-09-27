@@ -20,6 +20,12 @@ export const PublicHead: FC<{ title?: string; description?: string }> = ({ title
     <meta name="description" content={description || 'Professional sports media: match production, live streaming, commentary, graphics, photography, video and highlights.'} />
     <link rel="icon" type="image/png" href="/static/favicon.png" />
     <link rel="apple-touch-icon" href="/static/logo-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet" />
     <link href="/static/styles.css" rel="stylesheet" />
@@ -41,13 +47,14 @@ export const BrandMark: FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) =>
   )
 }
 
-// Compact primary nav; secondary links live under "More"
+// Compact primary nav; secondary links live under "More".
+// Required sequence: Home → About → Services → Live → Events → More
 const NAV = [
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
+  { href: '/services', label: 'Services' },
   { href: '/live', label: 'Live', accent: true },
   { href: '/events', label: 'Events' },
-  { href: '/services', label: 'Services' },
 ]
 const MORE = [
   { href: '/portfolio', label: 'Portfolio', icon: 'fa-briefcase' },

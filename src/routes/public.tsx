@@ -101,6 +101,37 @@ publicRoutes.get('/', async (c) => {
         </div>
       </section>
 
+      {/* ANIMATED SERVICES SHOWCASE — each service slides in &amp; out, then the brand takes the stage. Loops. */}
+      <section class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-4">
+        <div class="showcase" id="showcase">
+          <div class="showcase__stage" id="showcase-stage">
+            {(services.results as any[]).length > 0 ? (
+              <>
+                {(services.results as any[]).map((s, i) => (
+                  <div class="showcase__item" data-idx={i}>
+                    <span class="showcase__icon"><i class={`fas ${s.icon || 'fa-broadcast-tower'}`}></i></span>
+                    <h2 class="showcase__title">{esc(s.title)}</h2>
+                    <p class="showcase__desc">{esc(s.short_desc || '')}</p>
+                    <span class="showcase__bar"><span></span></span>
+                  </div>
+                ))}
+                <div class="showcase__brand">
+                  <div class="showcase__brand-word">AWADH SPORTS</div>
+                  <div class="showcase__brand-sub">Live</div>
+                  <div class="showcase__brand-tag">Every sport. Every moment. Live.</div>
+                </div>
+              </>
+            ) : (
+              <div class="showcase__item is-active">
+                <div class="showcase__brand-word">AWADH SPORTS</div>
+                <div class="showcase__brand-sub">Live</div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div class="showcase__dots" id="showcase-dots" hidden></div>
+      </section>
+
       {/* SERVICES */}
       <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <SectionTitle eyebrow="What we do" title="Complete Sports Media Services" subtitle="Professional media solutions for leagues, tournaments and sporting events." light center />
@@ -237,6 +268,8 @@ publicRoutes.get('/', async (c) => {
           </div>
         </div>
       </section>
+
+      <script src="/static/home-anim.js"></script>
     </PublicLayout>
   )
 })

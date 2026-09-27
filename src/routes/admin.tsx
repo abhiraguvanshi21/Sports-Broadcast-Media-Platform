@@ -146,7 +146,14 @@ adminRoutes.get('/bookings', async (c) => {
               <td class="px-4 py-3 text-slate-500 text-xs">{fmtDate(b.event_date)}</td>
               <td class="px-4 py-3 text-slate-500 text-xs">{esc(b.sport || '—')}</td>
               <td class="px-4 py-3"><Chip status={b.status} /></td>
-              <td class="px-4 py-3"><a href={`/admin/bookings/${b.id}`} class="text-red-600 font-semibold text-sm hover:underline">Open</a></td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <a href={`/admin/bookings/${b.id}`} class="text-red-600 font-semibold text-sm hover:underline">Open</a>
+                  <form method="post" action={`/admin/bookings/${b.id}/delete`} onsubmit="return confirm('Delete this booking permanently? Messages, quotations and services attached to it will also be removed.')">
+                    <button class="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
+                  </form>
+                </div>
+              </td>
             </tr>
           ))}
         </Table>
@@ -230,6 +237,32 @@ adminRoutes.get('/bookings/:id', async (c) => {
 
         <div class="space-y-6">
           <Card class="p-5">
+            <h2 class="font-bold text-slate-900 mb-4">Edit booking</h2>
+            <form method="post" action={`/admin/bookings/${id}/update`} class="space-y-3">
+              <Field label="Contact name"><input name="contact_name" value={b.contact_name || ''} class={inputCls} /></Field>
+              <div class="grid grid-cols-2 gap-3">
+                <Field label="Phone"><input name="contact_phone" value={b.contact_phone || ''} class={inputCls} /></Field>
+                <Field label="Email"><input name="contact_email" value={b.contact_email || ''} class={inputCls} /></Field>
+              </div>
+              <Field label="Organization"><input name="organization" value={b.organization || ''} class={inputCls} /></Field>
+              <div class="grid grid-cols-2 gap-3">
+                <Field label="Event name"><input name="event_name" value={b.event_name || ''} class={inputCls} /></Field>
+                <Field label="Sport"><input name="sport" value={b.sport || ''} class={inputCls} /></Field>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <Field label="Event date"><input name="event_date" type="date" value={b.event_date || ''} class={inputCls} /></Field>
+                <Field label="Budget"><input name="budget" value={b.budget || ''} class={inputCls} /></Field>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <Field label="City"><input name="city" value={b.city || ''} class={inputCls} /></Field>
+                <Field label="Venue"><input name="venue" value={b.venue || ''} class={inputCls} /></Field>
+              </div>
+              <Field label="Requirements"><textarea name="requirements" rows={3} class={inputCls}>{b.requirements || ''}</textarea></Field>
+              <button class={btnPrimary + ' w-full'}><i class="fas fa-save"></i> Save changes</button>
+            </form>
+          </Card>
+
+          <Card class="p-5">
             <h2 class="font-bold text-slate-900 mb-4">Update status</h2>
             <form method="post" action={`/admin/bookings/${id}/status`} class="space-y-3">
               <select name="status" class={inputCls}>
@@ -282,6 +315,41 @@ adminRoutes.post('/bookings/:id/status', async (c) => {
     .bind(status, String(f.admin_notes || ''), id).run()
   await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'booking.status', entity: 'bookings', entityId: id, details: status })
   return c.redirect(`/admin/bookings/${id}`)
+})
+
+// Edit every customer / event field of a booking.
+adminRoutes.post('/bookings/:id/update', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  const f = await c.req.parseBody()
+  const s = (k: string) => { const v = String(f[k] ?? '').trim(); return v || null }
+  await c.env.DB.prepare(
+    `UPDATE bookings SET contact_name=COALESCE(?,contact_name), contact_phone=COALESCE(?,contact_phone),
+       contact_email=?, organization=?, event_name=?, sport=?, event_date=?, venue=?, city=?, requirements=?, budget=?,
+       updated_at=CURRENT_TIMESTAMP WHERE id=?`
+  ).bind(s('contact_name'), s('contact_phone'), s('contact_email'), s('organization'), s('event_name'), s('sport'),
+    s('event_date'), s('venue'), s('city'), s('requirements'), s('budget'), id).run()
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'booking.updated', entity: 'bookings', entityId: id })
+  return c.redirect(`/admin/bookings/${id}`)
+})
+
+// Delete a booking entirely (admin) — removes messages, services, quotations,
+// documents, OTPs and unlinks any event created from it.
+adminRoutes.post('/bookings/:id/delete', async (c) => {
+  const user = c.get('user')!
+  const id = Number(c.req.param('id'))
+  const b: any = await c.env.DB.prepare(`SELECT booking_code FROM bookings WHERE id=?`).bind(id).first()
+  if (b) {
+    await c.env.DB.prepare(`UPDATE events SET booking_id=NULL WHERE booking_id=?`).bind(id).run()
+    await c.env.DB.prepare(`DELETE FROM booking_messages WHERE booking_id=?`).bind(id).run()
+    await c.env.DB.prepare(`DELETE FROM booking_services WHERE booking_id=?`).bind(id).run()
+    await c.env.DB.prepare(`DELETE FROM quotations WHERE booking_id=?`).bind(id).run()
+    await c.env.DB.prepare(`DELETE FROM documents WHERE booking_id=?`).bind(id).run()
+    try { await c.env.DB.prepare(`DELETE FROM otp_codes WHERE booking_id=?`).bind(id).run() } catch { /* table may not exist */ }
+    await c.env.DB.prepare(`DELETE FROM bookings WHERE id=?`).bind(id).run()
+    await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'booking.deleted', entity: 'bookings', entityId: id, details: b.booking_code })
+  }
+  return c.redirect('/admin/bookings')
 })
 
 adminRoutes.post('/bookings/:id/message', async (c) => {
