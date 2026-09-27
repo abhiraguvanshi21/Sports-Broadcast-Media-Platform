@@ -1,55 +1,52 @@
 /* ============================================================
-   AWADH Sports Live — home hero animation (box-free)
-   The services are also listed in a pure-CSS marquee band; here we
-   cycle the giant outline word behind the hero through every service,
-   then rest on the AWADH SPORTS brand. Loops forever.
+   AWADH Sports Live — home animations (box-free)
+   • Hero background: pure-CSS aurora + floating icons (no JS needed)
+   • Stats: count-up numbers when the hero scrolls into view
    ============================================================ */
 (function () {
-  var word = document.getElementById('hero-ghost-word')
-  if (!word) return
-
-  // Service titles are delivered to the page via a JSON island (kept in sync
-  // with the marquee section). Fall back to the initial server-rendered text.
-  var titles = []
-  try { titles = (window.__HOME_SERVICES__ || []).filter(function (t) { return !!t }) } catch (e) {}
-  if (titles.length === 0) titles = [word.textContent.trim()]
+  var counters = [].slice.call(document.querySelectorAll('.stat-count'))
+  if (!counters.length) return
 
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (titles.length < 2) return
 
-  var idx = 0
-  var WORD_MS = 2300     // each service word stays this long
-  var BRAND_MS = 3600    // the AWADH SPORTS finale
-
-  function setWord(text, flame) {
-    word.textContent = text
-    word.classList.toggle('is-flame', !!flame)
+  function setFinal(el) {
+    el.textContent = String(Number(el.getAttribute('data-count')) || 0)
   }
 
-  if (reduce) { setWord('AWADH SPORTS', true); return }
+  if (reduce) { counters.forEach(setFinal); return }
 
-  // Reveal the first word.
-  word.classList.add('is-on')
-
-  function step() {
-    // fade out
-    word.classList.remove('is-on')
-    setTimeout(function () {
-      if (idx < titles.length) {
-        setWord(titles[idx], false)
-        idx++
-      } else {
-        setWord('AWADH SPORTS', true)
-        idx = 0
-        // brand phase gets a longer hold
-        word.classList.add('is-on')
-        setTimeout(step, BRAND_MS)
-        return
-      }
-      word.classList.add('is-on')
-      setTimeout(step, WORD_MS)
-    }, 480)
+  function countUp(el) {
+    var target = Number(el.getAttribute('data-count')) || 0
+    if (target <= 0) { el.textContent = '0'; return }
+    var dur = 1400
+    var start = null
+    function frame(ts) {
+      if (start === null) start = ts
+      var p = Math.min((ts - start) / dur, 1)
+      // ease-out cubic
+      var eased = 1 - Math.pow(1 - p, 3)
+      el.textContent = String(Math.round(eased * target))
+      if (p < 1) requestAnimationFrame(frame)
+      else el.textContent = String(target)
+    }
+    requestAnimationFrame(frame)
   }
 
-  setTimeout(step, WORD_MS)
+  var done = new WeakSet()
+  function run(el) {
+    if (done.has(el)) return
+    done.add(el)
+    countUp(el)
+  }
+
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { run(e.target); io.unobserve(e.target) }
+      })
+    }, { threshold: 0.4 })
+    counters.forEach(function (el) { io.observe(el) })
+  } else {
+    counters.forEach(run)
+  }
 })()

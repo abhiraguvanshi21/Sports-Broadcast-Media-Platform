@@ -50,9 +50,24 @@ publicRoutes.get('/', async (c) => {
       {/* HERO */}
       <section class="relative overflow-hidden">
         <div class="absolute inset-0 opacity-30" style="background-image:radial-gradient(circle at 15% 10%, #ef4444 0, transparent 35%),radial-gradient(circle at 85% 20%, #f97316 0, transparent 30%)"></div>
-        {/* Giant service word pulsing behind the hero (no box) */}
-        <div class="hero-ghost" aria-hidden="true">
-          <div class="hero-ghost__word" id="hero-ghost-word">{(services.results as any[])[0]?.title || 'Live Sports Production'}</div>
+        {/* Animated aurora glow + soft grid behind the hero copy (no cut-off text) */}
+        <div class="hero-aurora" aria-hidden="true">
+          <span class="hero-aurora__blob hero-aurora__blob--1"></span>
+          <span class="hero-aurora__blob hero-aurora__blob--2"></span>
+          <span class="hero-aurora__blob hero-aurora__blob--3"></span>
+          <span class="hero-aurora__blob hero-aurora__blob--4"></span>
+        </div>
+        <div class="hero-sheen" aria-hidden="true"></div>
+        {/* Floating sport icons drifting gently in the background */}
+        <div class="hero-floaters" aria-hidden="true">
+          <span class="hero-floater" style="left:6%;top:22%;font-size:2.4rem;animation-delay:0s"><i class="fas fa-futbol"></i></span>
+          <span class="hero-floater" style="left:22%;top:70%;font-size:1.8rem;animation-delay:1.5s"><i class="fas fa-basketball"></i></span>
+          <span class="hero-floater" style="left:44%;top:12%;font-size:1.6rem;animation-delay:3s"><i class="fas fa-table-tennis-paddle-ball"></i></span>
+          <span class="hero-floater" style="left:62%;top:78%;font-size:2rem;animation-delay:2.2s"><i class="fas fa-trophy"></i></span>
+          <span class="hero-floater" style="left:86%;top:30%;font-size:2.2rem;animation-delay:4s"><i class="fas fa-video"></i></span>
+          <span class="hero-floater" style="left:92%;top:74%;font-size:1.5rem;animation-delay:.8s"><i class="fas fa-microphone"></i></span>
+          <span class="hero-floater" style="left:34%;top:44%;font-size:1.4rem;animation-delay:5s"><i class="fas fa-baseball"></i></span>
+          <span class="hero-floater" style="left:74%;top:8%;font-size:1.5rem;animation-delay:3.6s"><i class="fas fa-tower-broadcast"></i></span>
         </div>
         <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20 grid lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -78,9 +93,9 @@ publicRoutes.get('/', async (c) => {
               </a>
             </div>
             <div class="grid grid-cols-3 gap-6 mt-12 max-w-lg">
-              <div><div class="text-2xl font-extrabold text-white">{stats?.events ?? 0}+</div><div class="text-xs text-slate-500 uppercase tracking-wide">Events</div></div>
-              <div><div class="text-2xl font-extrabold text-white">{stats?.media ?? 0}+</div><div class="text-xs text-slate-500 uppercase tracking-wide">Media</div></div>
-              <div><div class="text-2xl font-extrabold text-white">{stats?.staff ?? 0}+</div><div class="text-xs text-slate-500 uppercase tracking-wide">Crew</div></div>
+              <div><div class="text-2xl font-extrabold text-white"><span class="stat-count" data-count={stats?.events ?? 0}>0</span>+</div><div class="text-xs text-slate-500 uppercase tracking-wide">Events</div></div>
+              <div><div class="text-2xl font-extrabold text-white"><span class="stat-count" data-count={stats?.media ?? 0}>0</span>+</div><div class="text-xs text-slate-500 uppercase tracking-wide">Media</div></div>
+              <div><div class="text-2xl font-extrabold text-white"><span class="stat-count" data-count={stats?.staff ?? 0}>0</span>+</div><div class="text-xs text-slate-500 uppercase tracking-wide">Crew</div></div>
             </div>
           </div>
           <div class="relative">
@@ -264,7 +279,6 @@ publicRoutes.get('/', async (c) => {
         </div>
       </section>
 
-      <script dangerouslySetInnerHTML={{ __html: `window.__HOME_SERVICES__=${JSON.stringify((services.results as any[]).map((s) => s.title))};` }}></script>
       <script src="/static/home-anim.js"></script>
     </PublicLayout>
   )
