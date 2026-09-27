@@ -159,8 +159,8 @@ Role access is enforced **server-side** on every protected route, so a customer 
 ## Deployment
 
 - **Platform**: Cloudflare Pages / Workers (Genspark Hosted Deploy).
-- **Status**: ✅ Live & verified (deployed 2026-09-17 via Genspark Hosted Deploy).
-- **Last Updated**: 2026-09-17
+- **Status**: ✅ Live & verified (redeployed 2026-09-27 via Genspark Hosted Deploy).
+- **Last Updated**: 2026-09-27
 
 ## Local Development
 
