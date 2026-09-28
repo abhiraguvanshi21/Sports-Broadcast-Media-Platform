@@ -77,78 +77,109 @@ async function loadProfile(c: any, user: any): Promise<ProfData> {
 
 function ProfileForm({ p, role, saved, pwError, pwOk }: { p: ProfData; role: Role; saved?: boolean; pwError?: string; pwOk?: boolean }) {
   const isCustomer = role === 'customer'
+  const initials = (p.full_name || 'U').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'U'
+  const parts = [p.full_name, p.email, p.phone, isCustomer ? p.organization : p.department, p.designation, p.employee_code]
+  const strength = Math.max(20, Math.round((parts.filter((x) => String(x || '').trim()).length / parts.length) * 100))
   return (
     <>
-      {saved && <div class="mb-5 msg-success rounded-xl px-4 py-3 text-sm"><i class="fas fa-circle-check mr-1"></i>Profile updated.</div>}
-      {pwOk && <div class="mb-5 msg-success rounded-xl px-4 py-3 text-sm"><i class="fas fa-circle-check mr-1"></i>Password changed.</div>}
-      {pwError && <div class="mb-5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 px-4 py-3 text-sm"><i class="fas fa-circle-exclamation mr-1"></i>{pwError}</div>}
+      {saved && <div class="pf-alert pf-alert--ok reveal mb-5"><i class="fas fa-circle-check"></i> Profile updated successfully.</div>}
+      {pwOk && <div class="pf-alert pf-alert--ok reveal mb-5"><i class="fas fa-shield-halved"></i> Password changed successfully.</div>}
+      {pwError && <div class="pf-alert pf-alert--err reveal mb-5"><i class="fas fa-circle-exclamation"></i> {pwError}</div>}
 
-      <div class="grid gap-6 lg:grid-cols-3">
+      <div class="grid gap-6 lg:grid-cols-3 items-start">
         {/* identity card */}
-        <div class="lg:col-span-1">
-          <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-6 text-center">
-            <div class="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-red-600 to-orange-500 text-white flex items-center justify-center text-3xl font-black">
-              {esc(p.full_name.charAt(0).toUpperCase() || 'U')}
+        <div class="lg:col-span-1 reveal reveal--left">
+          <div class="pf-id grad-border grad-border--on tilt spot">
+            <span class="pf-id__glow" aria-hidden="true"></span>
+            <div class="pf-avatar-wrap">
+              <span class="pf-avatar-ring" aria-hidden="true"></span>
+              <div class="pf-avatar">{esc(initials)}</div>
+              <span class="pf-id__online" title="Signed in"></span>
             </div>
-            <h2 class="text-white font-bold text-lg mt-4">{esc(p.full_name)}</h2>
-            <p class="text-sm text-slate-400 break-all">{esc(p.email)}</p>
-            <div class="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-slate-200 text-xs font-semibold uppercase tracking-wide">
-              <i class="fas fa-id-badge"></i> {ROLE_LABEL[role] || role}
+            <h2 class="pf-id__name">{esc(p.full_name)}</h2>
+            <p class="pf-id__email">{esc(p.email)}</p>
+            <span class="pf-role"><i class="fas fa-id-badge"></i> {ROLE_LABEL[role] || role}</span>
+
+            <div class="pf-strength">
+              <div class="pf-strength__top">
+                <span><i class="fas fa-chart-simple mr-1"></i>Profile strength</span>
+                <span>{strength}%</span>
+              </div>
+              <div class="pf-strength__bar"><span style={`width:${strength}%`}></span></div>
             </div>
-            <div class="mt-5 space-y-2 text-left text-sm text-slate-400">
-              {p.employee_code && <div><i class="fas fa-hashtag w-4 text-slate-500"></i> {esc(p.employee_code)}</div>}
-              {p.designation && <div><i class="fas fa-briefcase w-4 text-slate-500"></i> {esc(p.designation)}</div>}
-              {p.department && <div><i class="fas fa-sitemap w-4 text-slate-500"></i> {esc(p.department)}</div>}
-              {p.last_login && <div><i class="fas fa-clock w-4 text-slate-500"></i> Last login: {esc(p.last_login)}</div>}
+
+            <div class="pf-meta stagger">
+              {p.employee_code && <div class="pf-meta__row"><i class="fas fa-hashtag"></i> {esc(p.employee_code)}</div>}
+              {p.designation && <div class="pf-meta__row"><i class="fas fa-briefcase"></i> {esc(p.designation)}</div>}
+              {p.department && <div class="pf-meta__row"><i class="fas fa-sitemap"></i> {esc(p.department)}</div>}
+              {p.joined && <div class="pf-meta__row"><i class="fas fa-calendar-check"></i> Joined {esc(String(p.joined).slice(0, 10))}</div>}
+              {p.last_login && <div class="pf-meta__row"><i class="fas fa-clock"></i> Last login {esc(String(p.last_login).slice(0, 16))}</div>}
+              {!p.employee_code && !p.designation && !p.department && !p.joined && !p.last_login && (
+                <div class="pf-meta__row"><i class="fas fa-circle-info"></i> Add your details to complete your profile.</div>
+              )}
             </div>
-            <div class="mt-5 flex flex-wrap gap-2 justify-center">
-              {isCustomer && <a href="/account" class="px-4 py-2 rounded-xl border border-white/15 text-slate-200 text-sm hover:bg-white/5">My Bookings</a>}
-              {role === 'admin' && <a href="/admin" class="px-4 py-2 rounded-xl border border-white/15 text-slate-200 text-sm hover:bg-white/5">Admin Panel</a>}
-              {(role === 'employee' || role === 'manager') && <a href="/portal" class="px-4 py-2 rounded-xl border border-white/15 text-slate-200 text-sm hover:bg-white/5">My Workspace</a>}
+
+            <div class="pf-id__actions">
+              {isCustomer && <a href="/account" class="pf-link"><i class="fas fa-calendar-check"></i> My Bookings</a>}
+              {role === 'admin' && <a href="/admin" class="pf-link"><i class="fas fa-gauge-high"></i> Admin Panel</a>}
+              {(role === 'employee' || role === 'manager') && <a href="/portal" class="pf-link"><i class="fas fa-briefcase"></i> My Workspace</a>}
+              <a href="/" class="pf-link"><i class="fas fa-globe"></i> Website</a>
             </div>
           </div>
         </div>
 
         {/* editable details */}
         <div class="lg:col-span-2 space-y-6">
-          <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-6">
-            <h2 class="text-white font-bold text-lg mb-4">My details</h2>
+          <div class="pf-panel reveal">
+            <div class="pf-panel__head">
+              <span class="pf-panel__ico"><i class="fas fa-user-pen"></i></span>
+              <div>
+                <div class="pf-panel__title">My details</div>
+                <div class="pf-panel__sub">Keep your contact information up to date.</div>
+              </div>
+            </div>
             <form method="post" action="/profile" class="grid sm:grid-cols-2 gap-4">
-              <label class="text-sm text-slate-300">Full name
-                <input name="full_name" required value={esc(p.full_name)} class="form-dark mt-1.5" />
+              <label class="pf-label"><span class="pf-label__txt">Full name</span>
+                <input name="full_name" required value={esc(p.full_name)} class="form-dark" />
               </label>
-              <label class="text-sm text-slate-300">Phone
-                <input name="phone" value={esc(p.phone)} class="form-dark mt-1.5" />
+              <label class="pf-label"><span class="pf-label__txt">Phone</span>
+                <input name="phone" value={esc(p.phone)} class="form-dark" />
               </label>
-              <label class="text-sm text-slate-300">Email
-                <input name="email" type="email" readonly value={esc(p.email)} class="form-dark mt-1.5 opacity-60 cursor-not-allowed" />
+              <label class="pf-label"><span class="pf-label__txt">Email <i class="fas fa-lock text-[0.7em] opacity-70"></i></span>
+                <input name="email" type="email" readonly value={esc(p.email)} class="form-dark pf-readonly" />
               </label>
-              <label class="text-sm text-slate-300">{isCustomer ? 'Organization / Club' : 'Department'}
-                <input name="organization" value={esc(isCustomer ? p.organization : p.department)} class="form-dark mt-1.5" disabled={!isCustomer} />
+              <label class="pf-label"><span class="pf-label__txt">{isCustomer ? 'Organization / Club' : 'Department'}</span>
+                <input name="organization" value={esc(isCustomer ? p.organization : p.department)} class="form-dark pf-readonly" disabled={!isCustomer} />
               </label>
               {isCustomer && (
-                <label class="text-sm text-slate-300 sm:col-span-2">Address
-                  <textarea name="address" rows={2} class="form-dark mt-1.5">{esc(p.address)}</textarea>
+                <label class="pf-label sm:col-span-2"><span class="pf-label__txt">Address</span>
+                  <textarea name="address" rows={2} class="form-dark">{esc(p.address)}</textarea>
                 </label>
               )}
-              <button class={btnPrimary + ' sm:col-span-2 py-3'}>Save changes</button>
+              <button class={btnPrimary + ' shine sm:col-span-2 py-3'}><i class="fas fa-floppy-disk"></i> Save changes</button>
             </form>
-            <p class="text-xs text-slate-500 mt-3"><i class="fas fa-lock mr-1"></i>Your email is your login ID and cannot be changed here.</p>
+            <p class="pf-note"><i class="fas fa-lock mr-1"></i>Your email is your login ID and cannot be changed here.</p>
           </div>
 
-          <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-6">
-            <h2 class="text-white font-bold text-lg mb-4">Change password</h2>
+          <div class="pf-panel reveal">
+            <div class="pf-panel__head">
+              <span class="pf-panel__ico pf-panel__ico--cool"><i class="fas fa-key"></i></span>
+              <div>
+                <div class="pf-panel__title">Change password</div>
+                <div class="pf-panel__sub">Use at least 6 characters for a strong password.</div>
+              </div>
+            </div>
             <form method="post" action="/profile/password" class="grid sm:grid-cols-3 gap-4">
-              <label class="text-sm text-slate-300">Current password
-                <input name="current" type="password" required class="form-dark mt-1.5" />
+              <label class="pf-label"><span class="pf-label__txt">Current password</span>
+                <input name="current" type="password" required class="form-dark" />
               </label>
-              <label class="text-sm text-slate-300">New password
-                <input name="password" type="password" required class="form-dark mt-1.5" />
+              <label class="pf-label"><span class="pf-label__txt">New password</span>
+                <input name="password" type="password" required class="form-dark" />
               </label>
-              <label class="text-sm text-slate-300">Confirm new
-                <input name="confirm" type="password" required class="form-dark mt-1.5" />
+              <label class="pf-label"><span class="pf-label__txt">Confirm new</span>
+                <input name="confirm" type="password" required class="form-dark" />
               </label>
-              <button class={btnGhost + ' sm:col-span-3 !text-slate-100 !border-white/20 hover:!bg-white/5'}>Update password</button>
+              <button class="pf-btn-ghost sm:col-span-3"><i class="fas fa-shield-halved"></i> Update password</button>
             </form>
           </div>
         </div>

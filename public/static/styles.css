@@ -460,3 +460,172 @@ select.form-dark {
   }
   .float-slow, .shimmer, .orbs__b, .marquee__track, .grad-border::after, .divider-flow { animation: none !important; }
 }
+
+/* ============================================================
+   PROFILE PAGE  (used by customers on the dark public site AND
+   by staff on the light admin theme — both colour schemes are
+   defined here so the same markup is always legible)
+   ============================================================ */
+
+/* ---------- Alerts ---------- */
+.pf-alert {
+  display: flex; align-items: center; gap: .6rem;
+  border-radius: .9rem; padding: .8rem 1rem; font-size: .875rem; font-weight: 600;
+}
+body.site-public .pf-alert--ok  { background: rgba(16,185,129,.14); border: 1px solid rgba(16,185,129,.45); color: #6ee7b7; }
+body.site-public .pf-alert--err { background: rgba(244,63,94,.14);  border: 1px solid rgba(244,63,94,.45);  color: #fda4af; }
+body.staff-app  .pf-alert--ok   { background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; }
+body.staff-app  .pf-alert--err  { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; }
+
+/* ---------- Identity card ---------- */
+.pf-id {
+  position: relative; overflow: hidden;
+  border-radius: 1.4rem; padding: 1.9rem 1.5rem 1.6rem;
+  text-align: center;
+}
+body.site-public .pf-id {
+  background: linear-gradient(180deg, rgba(28,31,45,.92), rgba(16,18,27,.9));
+  border: 1px solid rgba(255,255,255,.1);
+}
+body.staff-app .pf-id {
+  background: #fff; border: 1px solid #e9ecf5;
+  box-shadow: 0 12px 34px -24px rgba(15,23,42,.4);
+}
+.pf-id__glow {
+  position: absolute; left: 50%; top: -55%; width: 240px; height: 240px;
+  transform: translateX(-50%); border-radius: 50%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle, rgba(255,61,0,.4), transparent 68%);
+  animation: pfGlow 9s ease-in-out infinite;
+}
+@keyframes pfGlow { 0%,100% { transform: translateX(-50%) scale(1); opacity: .8; } 50% { transform: translateX(-50%) scale(1.18); opacity: 1; } }
+
+.pf-avatar-wrap { position: relative; display: inline-block; z-index: 2; }
+.pf-avatar-ring {
+  position: absolute; inset: -7px; border-radius: 1.7rem; pointer-events: none;
+  background: conic-gradient(from 0deg, #ff3d00, #ff8a00, #22d3ee, #8b5cf6, #ff3d00);
+  filter: blur(7px); opacity: .6; animation: pfSpin 6s linear infinite;
+}
+@keyframes pfSpin { to { transform: rotate(360deg); } }
+.pf-avatar {
+  position: relative; width: 5.4rem; height: 5.4rem; border-radius: 1.5rem;
+  background-image: var(--flame-grad); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 900; letter-spacing: .02em;
+  box-shadow: 0 14px 34px -14px rgba(255,61,0,.75);
+}
+.pf-id__online {
+  position: absolute; right: 4px; bottom: 4px; width: 1.05rem; height: 1.05rem; border-radius: 50%;
+  background: #22c55e; border: 3px solid #fff; z-index: 3;
+  box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: pfOnline 2.2s ease-out infinite;
+}
+body.site-public .pf-id__online { border-color: #14161f; }
+@keyframes pfOnline { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 100% { box-shadow: 0 0 0 12px rgba(34,197,94,0); } }
+
+.pf-id__name { position: relative; z-index: 2; font-size: 1.15rem; font-weight: 800; margin-top: 1.1rem; letter-spacing: -.01em; }
+.pf-id__email { position: relative; z-index: 2; font-size: .82rem; margin-top: .2rem; word-break: break-all; }
+body.site-public .pf-id__name  { color: #fff; }
+body.site-public .pf-id__email { color: #b7c1de; }
+body.staff-app  .pf-id__name  { color: #0f172a; }
+body.staff-app  .pf-id__email { color: #64748b; }
+
+.pf-role {
+  position: relative; z-index: 2;
+  display: inline-flex; align-items: center; gap: .45rem;
+  margin-top: .85rem; padding: .35rem .85rem; border-radius: 999px;
+  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+}
+body.site-public .pf-role { background: rgba(255,255,255,.1); color: #dde4f7; }
+body.staff-app  .pf-role  { background: linear-gradient(120deg, rgba(255,61,0,.12), rgba(255,138,0,.12)); color: #c2410c; }
+
+/* ---------- Profile strength ---------- */
+.pf-strength { position: relative; z-index: 2; margin-top: 1.35rem; text-align: left; }
+.pf-strength__top { display: flex; justify-content: space-between; font-size: .72rem; font-weight: 600; }
+body.site-public .pf-strength__top { color: #93a0c4; }
+body.staff-app  .pf-strength__top { color: #64748b; }
+.pf-strength__bar { margin-top: .45rem; height: 7px; border-radius: 999px; overflow: hidden; }
+body.site-public .pf-strength__bar { background: rgba(255,255,255,.1); }
+body.staff-app  .pf-strength__bar { background: #eef1f8; }
+.pf-strength__bar > span {
+  display: block; height: 100%; border-radius: 999px;
+  background-image: var(--flame-grad);
+  box-shadow: 0 0 12px rgba(255,61,0,.55);
+  transition: width 1s cubic-bezier(.22,.9,.3,1);
+}
+
+/* ---------- Meta rows ---------- */
+.pf-meta { position: relative; z-index: 2; margin-top: 1.35rem; text-align: left; display: flex; flex-direction: column; gap: .55rem; }
+.pf-meta__row { display: flex; align-items: center; gap: .6rem; font-size: .82rem; }
+.pf-meta__row i { width: 1rem; text-align: center; color: #ff6a2b; }
+body.site-public .pf-meta__row { color: #dde4f7; }
+body.staff-app  .pf-meta__row { color: #334155; }
+
+/* ---------- Identity quick links ---------- */
+.pf-id__actions { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-top: 1.4rem; }
+.pf-link {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .5rem .9rem; border-radius: .8rem; font-size: .82rem; font-weight: 600;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease, color .15s ease;
+}
+.pf-link:hover { transform: translateY(-2px); }
+body.site-public .pf-link { border: 1px solid rgba(255,255,255,.15); color: #dde4f7; }
+body.site-public .pf-link:hover { background: rgba(255,255,255,.06); color: #fff; }
+body.staff-app  .pf-link { border: 1px solid #e2e8f0; color: #334155; background: #fff; }
+body.staff-app  .pf-link:hover { background: #f8fafc; color: #0f172a; border-color: #ffb27d; }
+
+/* ---------- Detail / form panels ---------- */
+.pf-panel {
+  position: relative; border-radius: 1.4rem; padding: 1.6rem 1.5rem;
+}
+body.site-public .pf-panel {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+}
+body.staff-app .pf-panel {
+  background: #fff; border: 1px solid #e9ecf5;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 12px 30px -26px rgba(15,23,42,.4);
+}
+.pf-panel__head { display: flex; align-items: center; gap: .85rem; margin-bottom: 1.25rem; }
+.pf-panel__ico {
+  width: 2.6rem; height: 2.6rem; flex: none; border-radius: .9rem;
+  display: flex; align-items: center; justify-content: center;
+  background-image: var(--flame-grad); color: #fff; font-size: 1.05rem;
+  box-shadow: 0 10px 24px -12px rgba(255,61,0,.8);
+}
+.pf-panel__ico--cool { background-image: var(--cool-grad); box-shadow: 0 10px 24px -12px rgba(34,211,238,.8); }
+.pf-panel__title { font-weight: 800; font-size: 1.05rem; }
+.pf-panel__sub { font-size: .78rem; margin-top: .1rem; }
+body.site-public .pf-panel__title { color: #fff; }
+body.site-public .pf-panel__sub   { color: #93a0c4; }
+body.staff-app  .pf-panel__title { color: #0f172a; }
+body.staff-app  .pf-panel__sub   { color: #64748b; }
+
+/* ---------- Labels & fields ---------- */
+.pf-label { display: block; }
+.pf-label__txt { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .45rem; }
+body.site-public .pf-label__txt { color: #dde4f7; }
+body.staff-app  .pf-label__txt { color: #334155; }
+
+/* ---------- Ghost button (theme-aware) ---------- */
+.pf-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .7rem 1.1rem; border-radius: .8rem; font-weight: 700; font-size: .875rem;
+  transition: background .15s, border-color .15s, color .15s, transform .1s;
+}
+.pf-btn-ghost:active { transform: scale(.99); }
+body.site-public .pf-btn-ghost { border: 1px solid rgba(255,255,255,.2); color: #fff; }
+body.site-public .pf-btn-ghost:hover { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.35); }
+body.staff-app  .pf-btn-ghost { border: 1px solid #e2e8f0; color: #334155; background: #fff; }
+body.staff-app  .pf-btn-ghost:hover { background: #f8fafc; border-color: #ffb27d; color: #0f172a; }
+
+/* ---------- Read-only field ---------- */
+.pf-readonly, .form-dark:disabled { opacity: .62; cursor: not-allowed; }
+
+/* ---------- Footnote ---------- */
+.pf-note { font-size: .74rem; margin-top: .85rem; }
+body.site-public .pf-note { color: #93a0c4; }
+body.staff-app  .pf-note { color: #94a3b8; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pf-avatar-ring, .pf-id__glow, .pf-id__online { animation: none !important; }
+  .pf-link:hover { transform: none; }
+}
