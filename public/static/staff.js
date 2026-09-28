@@ -72,11 +72,11 @@
     })
     root.addEventListener('drop', function (e) {
       var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]
-      if (f) upload(f)
+      if (f) choose(f)
     })
 
     fileInput.addEventListener('change', function () {
-      if (fileInput.files && fileInput.files[0]) upload(fileInput.files[0])
+      if (fileInput.files && fileInput.files[0]) choose(fileInput.files[0])
     })
 
     clearBtn.addEventListener('click', function (e) {
@@ -86,7 +86,10 @@
       showPreview('')
     })
 
-    function upload(file) {
+    // Open the frame editor first (so the user can crop / zoom / rotate),
+    // then upload the cropped result. Falls back to a plain upload if the
+    // cropper is unavailable.
+    function choose(file) {
       if (!/^image\//.test(file.type)) {
         alert('Please choose an image file (JPG, PNG, WEBP, GIF or SVG).')
         return
@@ -95,11 +98,26 @@
         alert('That image is larger than 8 MB. Please choose a smaller file.')
         return
       }
+      if (window.AWADHCropper && window.AWADHCropper.available()) {
+        window.AWADHCropper.open(file, function (blob, filename) {
+          // GIF / SVG can't be re-encoded by canvas — upload those as-is.
+          if (blob === file && !/gif|svg/i.test(file.type)) {
+            upload(file)
+          } else {
+            upload(blob, filename)
+          }
+        })
+      } else {
+        upload(file)
+      }
+    }
+
+    function upload(file, filename) {
       root.classList.add('is-uploading')
       bar.classList.remove('hidden')
 
       var fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', file, filename || file.name)
 
       var xhr = new XMLHttpRequest()
       xhr.open('POST', '/api/upload')

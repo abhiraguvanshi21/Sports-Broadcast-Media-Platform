@@ -120,7 +120,7 @@ export const ImageUploadField: FC<{ name: string; label: string; value?: string 
       <div class="w-full flex flex-col items-center gap-2" data-img-idle>
         <span class="img-drop__icon"><i class="fas fa-cloud-arrow-up"></i></span>
         <span class="text-sm font-semibold text-slate-600">Click to upload or drag &amp; drop</span>
-        <span class="img-drop__hint">Choose from your device, Google Drive, Photos or any folder — JPG, PNG, WEBP</span>
+        <span class="img-drop__hint">Choose from your device, Google Drive, Photos or any folder — then adjust the frame (crop, zoom, rotate) before it&#39;s added. JPG, PNG, WEBP, GIF or SVG.</span>
       </div>
       <div class="w-full hidden" data-img-preview-wrap>
         <img class="img-drop__preview" alt="" data-img-preview />

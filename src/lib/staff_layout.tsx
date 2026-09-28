@@ -132,6 +132,7 @@ export const StaffLayout: FC<{
           </div>
         </div>
         <script src="/static/reveal.js"></script>
+        <script src="/static/cropper.js"></script>
         <script src="/static/staff.js"></script>
       </body>
     </html>

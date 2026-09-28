@@ -126,3 +126,132 @@ body.staff-app {
   .ui-stat, .ui-card { transition: none; }
   .img-drop__bar > span { animation: none; width: 100%; }
 }
+
+/* ============================================================
+   PHOTO FRAME EDITOR (crop / zoom / move / rotate)
+   Opened from any [data-img-upload] field before upload.
+   ============================================================ */
+.awc-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  background: rgba(6, 8, 15, 0.72); backdrop-filter: blur(6px);
+  animation: awcFade .18s ease-out;
+}
+@keyframes awcFade { from { opacity: 0; } to { opacity: 1; } }
+
+.awc-panel {
+  width: 100%; max-width: 560px; max-height: 94vh; overflow-y: auto;
+  background: #fff; border-radius: 1.25rem; padding: 1.1rem 1.15rem 1.15rem;
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.6);
+  animation: awcPop .22s cubic-bezier(.2, .9, .3, 1.2);
+}
+@keyframes awcPop { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+
+.awc-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.awc-head__t { font-weight: 800; color: #0f172a; font-size: 1.05rem; display: flex; align-items: center; gap: .5rem; }
+.awc-head__t i { color: #ff3d00; }
+.awc-x {
+  width: 2rem; height: 2rem; border-radius: .6rem; color: #64748b;
+  display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s;
+}
+.awc-x:hover { background: #f1f5f9; color: #0f172a; }
+.awc-tip { font-size: .76rem; color: #64748b; margin-top: .35rem; }
+
+/* ---------- stage ---------- */
+.awc-stagewrap { display: flex; justify-content: center; margin: 1rem 0 .9rem; }
+.awc-stage {
+  position: relative; overflow: hidden; border-radius: .9rem;
+  background:
+    linear-gradient(45deg, #eef1f8 25%, transparent 25%) 0 0 / 18px 18px,
+    linear-gradient(-45deg, #eef1f8 25%, transparent 25%) 0 9px / 18px 18px,
+    linear-gradient(45deg, transparent 75%, #eef1f8 75%) 9px -9px / 18px 18px,
+    linear-gradient(-45deg, transparent 75%, #eef1f8 75%) -9px 0 / 18px 18px,
+    #f8fafc;
+  touch-action: none; cursor: grab; user-select: none;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+.awc-stage.is-dragging { cursor: grabbing; }
+.awc-stage > img {
+  position: absolute; left: 50%; top: 50%;
+  transform-origin: center center; pointer-events: none;
+  will-change: transform; max-width: none;
+}
+/* rule-of-thirds guide */
+.awc-grid { position: absolute; inset: 0; pointer-events: none; opacity: .55; }
+.awc-grid span { position: absolute; background: rgba(255, 255, 255, 0.7); box-shadow: 0 0 2px rgba(0,0,0,.4); }
+.awc-grid span:nth-child(1) { left: 33.33%; top: 0; bottom: 0; width: 1px; }
+.awc-grid span:nth-child(2) { left: 66.66%; top: 0; bottom: 0; width: 1px; }
+.awc-grid span:nth-child(3) { top: 33.33%; left: 0; right: 0; height: 1px; }
+.awc-grid span:nth-child(4) { top: 66.66%; left: 0; right: 0; height: 1px; }
+/* crop frame */
+.awc-frame { position: absolute; inset: 0; pointer-events: none; }
+.awc-frame::before {
+  content: ''; position: absolute; inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.28);
+  border-radius: .2rem;
+}
+.awc-c { position: absolute; width: 14px; height: 14px; border: 3px solid #ff3d00; }
+.awc-c.tl { left: -1px; top: -1px; border-right: none; border-bottom: none; }
+.awc-c.tr { right: -1px; top: -1px; border-left: none; border-bottom: none; }
+.awc-c.bl { left: -1px; bottom: -1px; border-right: none; border-top: none; }
+.awc-c.br { right: -1px; bottom: -1px; border-left: none; border-top: none; }
+
+/* ---------- ratio chips ---------- */
+.awc-aspects { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; }
+.awc-chip {
+  padding: .38rem .7rem; border-radius: .6rem; border: 1px solid #e2e8f0;
+  background: #fff; color: #475569; font-size: .78rem; font-weight: 700;
+  transition: all .15s;
+}
+.awc-chip:hover { border-color: #ffb27d; color: #0f172a; }
+.awc-chip.is-on {
+  background-image: linear-gradient(120deg, #ff3d00, #ff8a00);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 6px 16px -8px rgba(255, 61, 0, 0.8);
+}
+
+/* ---------- sliders ---------- */
+.awc-tools { display: flex; flex-direction: column; gap: .7rem; }
+.awc-row { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.awc-slider {
+  display: flex; align-items: center; gap: .55rem;
+  background: #f8fafc; border: 1px solid #eef1f8; border-radius: .7rem; padding: .45rem .65rem;
+}
+.awc-slider i { color: #ff6a2b; font-size: .85rem; width: 1rem; text-align: center; }
+.awc-slider input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px;
+  background: linear-gradient(90deg, #ff3d00, #ff8a00); outline: none;
+}
+.awc-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 3px solid #ff3d00; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+}
+.awc-slider input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid #ff3d00; cursor: pointer;
+}
+
+/* ---------- buttons ---------- */
+.awc-btnrow { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.awc-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .6rem 1rem; border-radius: .75rem; font-size: .84rem; font-weight: 700;
+  border: 1px solid #e2e8f0; background: #fff; color: #334155;
+  transition: background .15s, border-color .15s, color .15s, transform .1s;
+}
+.awc-btn:hover { background: #f8fafc; border-color: #ffb27d; color: #0f172a; }
+.awc-btn:active { transform: scale(.99); }
+.awc-btn--go {
+  background-image: linear-gradient(120deg, #ff3d00, #ff8a00); color: #fff; border-color: transparent;
+  box-shadow: 0 10px 24px -12px rgba(255, 61, 0, 0.9);
+}
+.awc-btn--go:hover { filter: brightness(1.06); color: #fff; }
+.awc-foot { display: flex; justify-content: flex-end; gap: .6rem; margin-top: .9rem; }
+
+@media (max-width: 480px) {
+  .awc-row { grid-template-columns: 1fr; }
+  .awc-tip { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .awc-overlay, .awc-panel { animation: none !important; }
+}
