@@ -131,6 +131,7 @@ export const StaffLayout: FC<{
             <main class="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto">{children}</main>
           </div>
         </div>
+        <script src="/static/reveal.js"></script>
         <script src="/static/staff.js"></script>
       </body>
     </html>
