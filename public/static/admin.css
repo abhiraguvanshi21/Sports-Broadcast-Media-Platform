@@ -1,0 +1,128 @@
+/* ============================================================
+   AWADH Sports Live — Admin / Portal theme
+   A polished, high-contrast LIGHT workspace. Scoped to
+   body.staff-app so the dark public theme never leaks in.
+   ============================================================ */
+body.staff-app {
+  background-color: #f6f7fb;
+  background-image:
+    radial-gradient(900px 520px at 100% -10%, rgba(255, 61, 0, 0.06), transparent 60%),
+    radial-gradient(760px 460px at -10% 8%, rgba(34, 211, 238, 0.06), transparent 60%);
+  background-attachment: fixed;
+  color: #1e293b;
+}
+
+/* ---------- Sidebar ---------- */
+.side-nav {
+  background:
+    radial-gradient(520px 320px at 0% 0%, rgba(255, 61, 0, 0.18), transparent 60%),
+    radial-gradient(520px 320px at 100% 100%, rgba(139, 92, 246, 0.16), transparent 60%),
+    linear-gradient(180deg, #0b0d17 0%, #0a0a12 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+.side-nav__group-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: #64748b; padding: 0 .75rem; margin: 1rem 0 .35rem;
+}
+.side-nav__link {
+  position: relative;
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem .75rem; border-radius: .8rem;
+  font-size: .875rem; color: #b6c0da;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+.side-nav__link i { width: 1rem; text-align: center; transition: color .15s ease; }
+.side-nav__link:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.side-nav__link.is-active {
+  color: #fff; font-weight: 600;
+  background: linear-gradient(120deg, rgba(255, 61, 0, 0.9), rgba(255, 138, 0, 0.85));
+  box-shadow: 0 8px 22px rgba(255, 61, 0, 0.32);
+}
+.side-nav__link.is-active::before {
+  content: ''; position: absolute; left: -3px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 60%; border-radius: 999px; background: #fff; opacity: .85;
+}
+.side-nav__link.is-active i { color: #fff; }
+.side-nav__brand { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.side-nav__foot { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* ---------- Topbar ---------- */
+.topbar {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid #e6e9f2;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+}
+
+/* ---------- Cards ---------- */
+.ui-card {
+  background: #ffffff;
+  border: 1px solid #e9ecf5;
+  border-radius: 1.15rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -18px rgba(15, 23, 42, 0.25);
+  transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+}
+.ui-card:hover { border-color: #dfe4f1; box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 16px 36px -22px rgba(15, 23, 42, 0.35); }
+
+/* ---------- Stat tiles ---------- */
+.ui-stat {
+  position: relative;
+  background: #fff;
+  border: 1px solid #e9ecf5;
+  border-radius: 1.15rem;
+  padding: 1.15rem 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 26px -20px rgba(15, 23, 42, 0.3);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.ui-stat::after {
+  content: ''; position: absolute; right: -30px; top: -30px; width: 110px; height: 110px;
+  border-radius: 50%; background: radial-gradient(circle, rgba(255, 61, 0, 0.10), transparent 70%);
+}
+.ui-stat:hover { transform: translateY(-3px); box-shadow: 0 16px 34px -22px rgba(15, 23, 42, 0.45); }
+.ui-stat--flame::after { background: radial-gradient(circle, rgba(255, 61, 0, 0.16), transparent 70%); }
+.ui-stat--cool::after  { background: radial-gradient(circle, rgba(34, 211, 238, 0.16), transparent 70%); }
+.ui-stat--violet::after{ background: radial-gradient(circle, rgba(139, 92, 246, 0.16), transparent 70%); }
+
+/* ---------- Tables ---------- */
+.ui-table { border: 1px solid #e9ecf5; border-radius: 1.15rem; overflow: hidden; background: #fff; }
+.ui-table thead { background: #f4f6fb; }
+.ui-table thead th { color: #64748b; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+.ui-table tbody tr { transition: background .12s ease; }
+.ui-table tbody tr:hover { background: #f8fafc; }
+
+/* ---------- Buttons (light) ---------- */
+.btn-flame {
+  background-image: linear-gradient(120deg, #ff3d00, #ff8a00);
+  color: #fff;
+}
+
+/* ---------- Image uploader ---------- */
+.img-drop {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .4rem; text-align: center;
+  min-height: 8.5rem;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: .9rem;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  padding: 1rem;
+  transition: border-color .15s, background .15s;
+}
+.img-drop:hover { border-color: #ff8a00; background: #fff7f2; }
+.img-drop.is-drag { border-color: #ff3d00; background: #fff1ea; }
+.img-drop.has-file { border-style: solid; border-color: #e2e8f0; background: #fff; padding: .5rem; }
+.img-drop__preview { width: 100%; max-height: 9rem; object-fit: contain; border-radius: .6rem; }
+.img-drop__icon { font-size: 1.5rem; color: #94a3b8; }
+.img-drop__hint { font-size: .72rem; color: #94a3b8; }
+.img-drop.is-uploading { opacity: .7; pointer-events: none; }
+.img-drop__bar { width: 100%; height: 4px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.img-drop__bar > span { display: block; height: 100%; width: 30%; background-image: linear-gradient(120deg, #ff3d00, #ff8a00); animation: imgbar 1s ease-in-out infinite; }
+@keyframes imgbar { 0% { margin-left: -30%; } 100% { margin-left: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-stat, .ui-card { transition: none; }
+  .img-drop__bar > span { animation: none; width: 100%; }
+}

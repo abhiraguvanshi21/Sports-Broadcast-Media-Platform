@@ -279,7 +279,7 @@ export const PublicLayout: FC<{ children?: any; current?: string; title?: string
 }) => (
   <html lang="en">
     <PublicHead title={title} description={description} />
-    <body class="bg-slate-950 text-slate-100 antialiased">
+    <body class="site-public bg-slate-950 text-slate-100 antialiased">
       <PublicHeader current={current} user={user} />
       <main>{children}</main>
       <PublicFooter user={user} />

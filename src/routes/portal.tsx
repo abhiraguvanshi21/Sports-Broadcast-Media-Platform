@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { StaffLayout, Notice } from '../lib/staff_layout'
-import { Stat, Card, Table, Empty, Chip, btnPrimary, btnGhost, inputCls, Field } from '../lib/components'
+import { Stat, Card, Table, Empty, Chip, btnPrimary, btnGhost, inputCls, Field, ImageUploadField } from '../lib/components'
 import { fmtDate, fmtDateTime, esc, logActivity } from '../lib/utils'
 import { canAccess } from '../lib/auth'
 
@@ -299,8 +299,9 @@ portalRoutes.get('/media', async (c) => {
                 {['photo','video','highlight','reel','interview'].map((t)=><option value={t} class="capitalize">{t}</option>)}
               </select>
             </Field>
-            <Field label="Media URL" required hint="Link to the file (Drive / CDN / cloud storage)"><input name="url" required class={inputCls} placeholder="https://..." /></Field>
-            <Field label="Thumbnail URL"><input name="thumbnail" class={inputCls} placeholder="https://..." /></Field>
+            <ImageUploadField name="url" label="Image / file" hint="Upload the photo from your device, Drive or Photos." />
+            <ImageUploadField name="thumbnail" label="Thumbnail (optional)" hint="Used as the preview card image." />
+            <Field label="Or paste a video / external URL"><input name="url_external" class={inputCls} placeholder="https://... (optional)" /></Field>
             <Field label="Event">
               <select name="event_id" class={inputCls}><option value="">— Select —</option>
                 {(events.results as any[]).map((e)=><option value={e.id}>{esc(e.name)}</option>)}
@@ -331,8 +332,10 @@ portalRoutes.get('/media', async (c) => {
 portalRoutes.post('/media', async (c) => {
   const user = c.get('user')!
   const f = await c.req.parseBody()
+  const url = String(f.url || '').trim() || String(f.url_external || '').trim()
+  const thumb = String(f.thumbnail || '').trim() || null
   await c.env.DB.prepare(`INSERT INTO media (title, media_type, url, thumbnail, event_id, uploaded_by, status) VALUES (?,?,?,?,?,?, 'pending')`)
-    .bind(String(f.title), String(f.media_type || 'photo'), String(f.url), String(f.thumbnail || '') || null, f.event_id ? Number(f.event_id) : null, user.employee_id).run()
+    .bind(String(f.title), String(f.media_type || 'photo'), url, thumb, f.event_id ? Number(f.event_id) : null, user.employee_id).run()
   await c.env.DB.prepare(`INSERT INTO notifications (title, body, link, audience) VALUES ('Media awaiting approval', ?, '/admin/media', 'admins')`).bind(String(f.title)).run()
   return c.redirect('/portal/media')
 })

@@ -238,4 +238,38 @@ apiRoutes.post('/notifications/read-all', async (c) => {
   return c.json({ ok: true })
 })
 
+// ============================================================
+// STAFF: image upload to R2 (used by admin/portal image fields)
+// ============================================================
+const MAX_UPLOAD = 8 * 1024 * 1024 // 8 MiB
+const ALLOWED_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'image/gif': 'gif', 'image/svg+xml': 'svg', 'image/avif': 'avif',
+}
+
+apiRoutes.post('/upload', async (c) => {
+  const user = c.get('user')
+  if (!user || user.role === 'customer') return c.json({ error: 'Unauthorized' }, 403)
+  if (!c.env.R2) return c.json({ error: 'Storage not configured.' }, 503)
+
+  let form: any
+  try { form = await c.req.formData() } catch { return c.json({ error: 'Invalid upload.' }, 400) }
+  const file = form.get('file')
+  if (!file || typeof file === 'string') return c.json({ error: 'No file provided.' }, 400)
+
+  const type = String(file.type || '')
+  const ext = ALLOWED_TYPES[type]
+  if (!ext) return c.json({ error: 'Unsupported file type. Please upload a JPG, PNG, WEBP, GIF or SVG.' }, 400)
+  const size = Number(file.size || 0)
+  if (size > MAX_UPLOAD) return c.json({ error: 'File too large. Max 8 MB.' }, 400)
+
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  const rand = Math.random().toString(36).slice(2, 10)
+  const key = `uploads/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${rand}.${ext}`
+  await c.env.R2.put(key, bytes, { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000' } })
+
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'upload.created', entity: 'r2', details: key, ip: ip(c) })
+  return c.json({ ok: true, url: `/media/${key}`, key })
+})
+
 apiRoutes.get('/health', (c) => c.json({ ok: true, ts: Date.now() }))

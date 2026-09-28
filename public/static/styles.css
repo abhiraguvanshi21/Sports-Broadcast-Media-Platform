@@ -26,6 +26,13 @@
    ============================================================ */
 html { scroll-behavior: smooth; }
 body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+/* Dark public theme is scoped to the public site only, so the light
+   admin/portal panels are never affected by these rules. */
+body.site-public {
   background-color: var(--ink);
   background-image:
     radial-gradient(1100px 600px at 12% -8%, rgba(255, 61, 0, 0.16), transparent 60%),
@@ -33,10 +40,8 @@ body {
     radial-gradient(800px 700px at 60% 110%, rgba(139, 92, 246, 0.12), transparent 60%);
   background-attachment: fixed;
   color: var(--txt);
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
 }
+/* Display fonts (applied everywhere — harmless on light panels too) */
 h1, h2, h3, .font-display {
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
   letter-spacing: -0.02em;
@@ -48,12 +53,15 @@ h4, h5, h6, .font-black, .font-extrabold, .font-bold {
 code, pre, .font-mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; }
 
 /* ============================================================
-   Readability — guarantee nothing is invisible on dark surfaces
+   Readability on dark surfaces — SCOPED to the public site only.
+   (Un-scoped, these !important rules made admin/portal text
+    invisible on their light backgrounds.)
    ============================================================ */
-.text-slate-400 { color: #b7c1de !important; }
-.text-slate-500 { color: #93a0c4 !important; }
-.text-slate-300 { color: #dde4f7; }
-h1, h2, h3, h4, h5, h6 { color: #ffffff; }
+.site-public .text-slate-400 { color: #b7c1de !important; }
+.site-public .text-slate-500 { color: #93a0c4 !important; }
+.site-public .text-slate-300 { color: #dde4f7; }
+.site-public h1, .site-public h2, .site-public h3,
+.site-public h4, .site-public h5, .site-public h6 { color: #ffffff; }
 .form-dark::placeholder { color: #8f9bbd; }
 
 /* ============================================================

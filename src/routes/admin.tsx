@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { StaffLayout, Notice } from '../lib/staff_layout'
-import { Stat, Card, Table, Empty, Chip, Field, inputCls, btnPrimary, btnGhost, btnDanger } from '../lib/components'
+import { Stat, Card, Table, Empty, Chip, Field, inputCls, btnPrimary, btnGhost, btnDanger, ImageUploadField } from '../lib/components'
 import { fmtDate, fmtDateTime, fmtMoney, esc, logActivity } from '../lib/utils'
 import { canAccess, hashPassword, type Module } from '../lib/auth'
 import { computeSalary, getSetting, parseClock, fmtClock } from '../lib/policy'
@@ -1098,8 +1098,9 @@ adminRoutes.get('/media', async (c) => {
         <form method="post" action="/admin/media" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Field label="Title" required><input name="title" required class={inputCls} /></Field>
           <Field label="Type"><select name="media_type" class={inputCls}>{['photo','video','highlight','reel','interview'].map((t)=><option value={t}>{t}</option>)}</select></Field>
-          <Field label="URL" required><input name="url" required class={inputCls} /></Field>
-          <Field label="Thumbnail"><input name="thumbnail" class={inputCls} /></Field>
+          <ImageUploadField name="url" label="Image / file" hint="Upload the image — or paste a video link in the URL box below." />
+          <ImageUploadField name="thumbnail" label="Thumbnail (optional)" hint="Used as the preview card image." />
+          <Field label="Or paste a direct URL (video / external)"><input name="url_external" class={inputCls} placeholder="https://... (optional)" /></Field>
           <button class={btnPrimary + ' sm:col-span-2 lg:col-span-4'}>Add media</button>
         </form>
       </Card>
@@ -1130,8 +1131,10 @@ adminRoutes.get('/media', async (c) => {
 
 adminRoutes.post('/media', async (c) => {
   const f = await c.req.parseBody()
+  const url = String(f.url || '').trim() || String(f.url_external || '').trim()
+  const thumb = String(f.thumbnail || '').trim() || null
   await c.env.DB.prepare(`INSERT INTO media (title, media_type, url, thumbnail, status, is_public) VALUES (?,?,?,?, 'approved', 1)`)
-    .bind(String(f.title), String(f.media_type||'photo'), String(f.url), String(f.thumbnail||'')||null).run()
+    .bind(String(f.title), String(f.media_type||'photo'), url, thumb).run()
   return c.redirect('/admin/media')
 })
 
@@ -1174,7 +1177,7 @@ adminRoutes.get('/portfolio', async (c) => {
             <Field label="Title" required><input name="title" required class={inputCls} /></Field>
             <Field label="Sport"><input name="sport" class={inputCls} /></Field>
             <Field label="Client"><input name="client" class={inputCls} /></Field>
-            <Field label="Cover image URL"><input name="cover_image" class={inputCls} /></Field>
+            <ImageUploadField name="cover_image" label="Cover image" hint="Upload a cover image for the project card." />
             <Field label="Services delivered"><input name="services_delivered" class={inputCls} /></Field>
             <Field label="Video URL"><input name="video_url" class={inputCls} /></Field>
             <Field label="Description"><textarea name="description" rows={2} class={inputCls + ' sm:col-span-2'}></textarea></Field>
@@ -1753,7 +1756,7 @@ adminRoutes.get('/team', async (c) => {
             </Field>
             <Field label="Short bio"><textarea name="bio" rows={3} class={inputCls}></textarea></Field>
             <Field label="Email"><input name="email" type="email" class={inputCls} /></Field>
-            <Field label="Photo URL"><input name="photo_url" class={inputCls} /></Field>
+            <ImageUploadField name="photo_url" label="Photo" hint="Upload a headshot — shown on the About page." />
             <Field label="Display order"><input name="sort_order" type="number" value="10" class={inputCls} /></Field>
             <button class={btnPrimary + ' w-full'}>Add member</button>
           </form>

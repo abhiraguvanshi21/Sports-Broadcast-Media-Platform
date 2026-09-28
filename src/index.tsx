@@ -30,6 +30,19 @@ app.use('/static/*', async (c) => {
   return c.env.ASSETS.fetch(c.req.raw)
 })
 
+// Uploaded media served straight from R2
+app.get('/media/*', async (c) => {
+  const key = c.req.path.replace(/^\/media\//, '')
+  if (!c.env.R2 || !key) return c.notFound()
+  const obj = await c.env.R2.get(key)
+  if (!obj) return c.notFound()
+  const headers = new Headers()
+  obj.writeHttpMetadata(headers)
+  headers.set('etag', obj.httpEtag)
+  headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  return new Response(obj.body, { headers })
+})
+
 // Feature routes
 app.route('/', publicRoutes)
 app.route('/', bookingRoutes)

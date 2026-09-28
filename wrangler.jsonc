@@ -12,5 +12,11 @@
       "database_name": "primecast-production",
       "database_id": "PLACEHOLDER_D1_ID"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "primecast-media"
+    }
   ]
 }

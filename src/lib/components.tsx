@@ -9,7 +9,7 @@ export const Chip: FC<{ status?: string | null; label?: string }> = ({ status, l
 )
 
 export const Card: FC<{ children?: any; class?: string }> = ({ children, class: cls }) => (
-  <div class={`bg-white rounded-2xl border border-slate-200 shadow-sm ${cls || ''}`}>{children}</div>
+  <div class={`bg-white rounded-2xl border border-slate-200 shadow-sm ui-card ${cls || ''}`}>{children}</div>
 )
 
 export const SectionTitle: FC<{ eyebrow?: string; title: string; subtitle?: string; light?: boolean; center?: boolean }> = ({
@@ -26,19 +26,20 @@ export const SectionTitle: FC<{ eyebrow?: string; title: string; subtitle?: stri
   </div>
 )
 
-export const Stat: FC<{ label: string; value: any; icon?: string; tone?: string; sub?: string }> = ({
+export const Stat: FC<{ label: string; value: any; icon?: string; tone?: string; sub?: string; accent?: 'flame' | 'cool' | 'violet' }> = ({
   label,
   value,
   icon,
   tone = 'bg-red-50 text-red-600',
   sub,
+  accent = 'flame',
 }) => (
-  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-    <div class="flex items-start justify-between">
+  <div class={`ui-stat ui-stat--${accent}`}>
+    <div class="flex items-start justify-between relative z-10">
       <div>
-        <div class="text-sm text-slate-500 font-medium">{label}</div>
-        <div class="text-3xl font-extrabold text-slate-900 mt-1">{value}</div>
-        {sub && <div class="text-xs text-slate-400 mt-1">{sub}</div>}
+        <div class="text-xs text-slate-500 font-semibold uppercase tracking-wide">{label}</div>
+        <div class="text-3xl font-extrabold text-slate-900 mt-1.5">{value}</div>
+        {sub && <div class="text-xs text-slate-500 mt-1">{sub}</div>}
       </div>
       {icon && (
         <span class={`w-11 h-11 rounded-xl flex items-center justify-center text-lg ${tone}`}>
@@ -90,10 +91,46 @@ export const THead: FC<{ cols: string[] }> = ({ cols }) => (
 )
 
 export const Table: FC<{ cols: string[]; children?: any }> = ({ cols, children }) => (
-  <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+  <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white ui-table">
     <table class="w-full text-sm">
       <THead cols={cols} />
       <tbody class="divide-y divide-slate-100">{children}</tbody>
     </table>
   </div>
+)
+
+/**
+ * Image uploader — lets admin/portal pick a file from their device or any
+ * cloud folder (Drive/Photos mount into the OS file picker). The chosen file
+ * is POSTed to /api/upload which stores it in R2 and returns a public URL that
+ * is written into the hidden input. Falls back to pasting a URL.
+ */
+export const ImageUploadField: FC<{ name: string; label: string; value?: string | null; hint?: string; accept?: string }> = ({
+  name,
+  label,
+  value,
+  hint,
+  accept = 'image/*',
+}) => (
+  <label class="block">
+    <span class="block text-sm font-medium text-slate-700 mb-1.5">{label}</span>
+    <div class="img-drop" data-img-upload>
+      <input type="file" accept={accept} class="hidden" data-img-input />
+      <input type="hidden" name={name} value={value || ''} data-img-value />
+      <div class="w-full flex flex-col items-center gap-2" data-img-idle>
+        <span class="img-drop__icon"><i class="fas fa-cloud-arrow-up"></i></span>
+        <span class="text-sm font-semibold text-slate-600">Click to upload or drag &amp; drop</span>
+        <span class="img-drop__hint">Choose from your device, Google Drive, Photos or any folder — JPG, PNG, WEBP</span>
+      </div>
+      <div class="w-full hidden" data-img-preview-wrap>
+        <img class="img-drop__preview" alt="" data-img-preview />
+        <div class="flex items-center justify-between gap-2 mt-1">
+          <span class="text-xs text-slate-500 truncate" data-img-name></span>
+          <button type="button" class="text-xs font-semibold text-rose-600 hover:underline" data-img-clear>Remove</button>
+        </div>
+      </div>
+      <div class="img-drop__bar hidden" data-img-bar><span></span></div>
+    </div>
+    <span class="block text-xs text-slate-400 mt-1">{hint || 'Upload an image — its URL is saved automatically.'}</span>
+  </label>
 )
