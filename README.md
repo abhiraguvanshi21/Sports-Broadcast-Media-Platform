@@ -125,6 +125,7 @@ Role access is enforced **server-side** on every protected route, so a customer 
 - **Admin → Employees**: create an employee account with **any email + password**; the person then signs in at `/login` and reaches their own portal. Admin can deactivate/reactivate any account and retains full control.
 - **Admin → YouTube Videos**: add videos by URL or ID (title + thumbnail auto-fetched), mark one as **Live** or **Upcoming**, hide/delete — controlling what appears on the Live hub, Gallery and Home.
 - **Admin → Team & About**: manage the About-page team members (Founder, Production Manager, Administrator …).
+- **Photo frame editor (all image uploads)**: whenever an image is added anywhere (media, portfolio, team, YouTube, etc.) a built-in editor opens first — drag to **move**, slide/scroll to **zoom**, **rotate** (slider or 90°), and pick a **frame ratio** (1:1, 4:3, 3:4, 16:9, 9:16, 3:2, 2:3 or Free). The adjusted crop is rendered on a canvas and uploaded to R2; the stored URL is written into the form field. Files are re-encoded to JPEG/PNG/WEBP on crop (GIF/SVG are uploaded as-is).
 - **Production Manager**: event/team/production access; blocked from CMS, settings and employee management (enforced server-side per the Section 14 matrix).
 
 ## Functional Entry URIs
