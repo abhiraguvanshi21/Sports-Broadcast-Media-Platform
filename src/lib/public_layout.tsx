@@ -285,6 +285,7 @@ export const PublicLayout: FC<{ children?: any; current?: string; title?: string
       <PublicFooter user={user} />
       <ContactFab />
       <script src="/static/app.js"></script>
+      <script src="/static/reveal.js"></script>
     </body>
   </html>
 )
