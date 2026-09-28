@@ -20,7 +20,27 @@ export type YtVideo = {
   is_upcoming?: boolean
 }
 
-const UA = 'Mozilla/5.0 (compatible; AWADHSportsBot/1.0; +https://awadhsports.example)'
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+
+// AWADH Sports channel — canonical id. Used as a last-resort fallback when the
+// @handle can't be resolved (the live handle is `@awadh_sports.` WITH a dot,
+// which YouTube treats differently from `@awadh_sports`).
+export const DEFAULT_CHANNEL_ID = 'UCXDdAHKzDEcHyKhl6kZkN8A'
+
+function extractChannelId(html: string): string | null {
+  const pats = [
+    /"channelId":"(UC[\w-]{22})"/,
+    /<meta itemprop="identifier" content="(UC[\w-]{22})"/,
+    /"externalId":"(UC[\w-]{22})"/,
+    /channel\/(UC[\w-]{22})/,
+  ]
+  for (const p of pats) {
+    const m = html.match(p)
+    if (m) return m[1]
+  }
+  return null
+}
 
 async function getText(url: string, ms = 8000): Promise<string | null> {
   const ctrl = new AbortController()
@@ -49,26 +69,41 @@ function decodeEntities(s: string): string {
     .trim()
 }
 
-/** Resolve the channel id (UC…) from an @handle or channel URL. */
+/**
+ * Resolve the channel id (UC…) from an @handle, a channel URL or a bare id.
+ * The live handle is `@awadh_sports.` (trailing dot) — YouTube resolves
+ * `@awadh_sports` to 404, so we try several handle spellings before giving up.
+ */
 export async function resolveChannelId(handleOrUrl: string): Promise<string | null> {
-  let h = (handleOrUrl || '').trim().replace(/\.$/, '')
-  if (!h) return null
-  if (/^UC[\w-]{22}$/.test(h)) return h
-  if (!/^https?:/.test(h)) {
-    if (!h.startsWith('@')) h = '@' + h
-    h = 'https://www.youtube.com/' + h
+  const raw = (handleOrUrl || '').trim()
+  if (!raw) return null
+  if (/^UC[\w-]{22}$/.test(raw)) return raw
+
+  // Build a list of candidate URLs to try, in order.
+  const urls: string[] = []
+  const addHandle = (h: string) => urls.push(`https://www.youtube.com/@${h}`)
+
+  if (/^https?:/.test(raw)) {
+    urls.push(raw)
+    // If the URL carries an @handle, also try the dot/no-dot variants.
+    const m = raw.match(/@([A-Za-z0-9._-]+)/)
+    if (m) {
+      const hn = m[1]
+      addHandle(hn.endsWith('.') ? hn.slice(0, -1) : hn)
+      addHandle(hn.endsWith('.') ? hn : hn + '.')
+    }
+  } else {
+    const base = raw.replace(/^@/, '')
+    const noDot = base.replace(/\.$/, '')
+    addHandle(noDot)
+    addHandle(noDot + '.')
   }
-  const html = await getText(h, 9000)
-  if (!html) return null
-  const pats = [
-    /"channelId":"(UC[\w-]{22})"/,
-    /<meta itemprop="identifier" content="(UC[\w-]{22})"/,
-    /"externalId":"(UC[\w-]{22})"/,
-    /channel\/(UC[\w-]{22})/,
-  ]
-  for (const p of pats) {
-    const m = html.match(p)
-    if (m) return m[1]
+
+  for (const url of urls) {
+    const html = await getText(url, 9000)
+    if (!html) continue
+    const cid = extractChannelId(html)
+    if (cid) return cid
   }
   return null
 }
@@ -151,7 +186,7 @@ export async function syncYouTube(env: Bindings, opts: { force?: boolean; ttlMin
       }
     }
 
-    const handle = await getSetting(env, 'youtube_channel_handle', 'awadh_sports')
+    const handle = await getSetting(env, 'youtube_channel_handle', 'awadh_sports.')
     let channelId = await getSetting(env, 'youtube_channel_id', '')
     if (!channelId || opts.force) {
       const resolved = await resolveChannelId(handle)
@@ -160,7 +195,12 @@ export async function syncYouTube(env: Bindings, opts: { force?: boolean; ttlMin
         await setSetting(env, 'youtube_channel_id', channelId)
       }
     }
-    if (!channelId) return { ok: false, error: 'channel-not-resolved' }
+    // Fall back to the known canonical channel id so sync works even when the
+    // @handle lookup is unavailable (e.g. a stale/wrong handle in settings).
+    if (!channelId) {
+      channelId = DEFAULT_CHANNEL_ID
+      await setSetting(env, 'youtube_channel_id', channelId)
+    }
 
     const [feed, liveUp] = await Promise.all([fetchChannelFeed(channelId), fetchLiveAndUpcoming(channelId)])
     let added = 0

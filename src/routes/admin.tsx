@@ -4,7 +4,7 @@ import { StaffLayout, Notice } from '../lib/staff_layout'
 import { Stat, Card, Table, Empty, Chip, Field, inputCls, btnPrimary, btnGhost, btnDanger, ImageUploadField } from '../lib/components'
 import { fmtDate, fmtDateTime, fmtMoney, esc, logActivity } from '../lib/utils'
 import { canAccess, hashPassword, type Module } from '../lib/auth'
-import { computeSalary, getSetting, parseClock, fmtClock } from '../lib/policy'
+import { computeSalary, getSetting, setSetting, parseClock, fmtClock } from '../lib/policy'
 import { syncYouTube } from '../lib/youtube'
 
 export const adminRoutes = new Hono<AppEnv>()
@@ -1614,10 +1614,13 @@ adminRoutes.get('/youtube', async (c) => {
               <button class={btnPrimary + ' w-full'}><i class="fas fa-rotate"></i> Sync now</button>
             </form>
             <div class="flex items-center gap-1 text-sm mb-2">
-              <span class="text-slate-500">Channel:</span>
+              <span class="text-slate-500">Channel handle:</span>
             </div>
-            <input type="text" value="awadh_sports" class="w-full text-sm rounded-lg border border-slate-300 px-2.5 py-1.5 mb-2" disabled />
-            <a href="https://youtube.com/@awadh_sports." target="_blank" rel="noopener" class="text-sm text-red-600 font-semibold hover:underline">Open channel →</a>
+            <form method="post" action="/admin/youtube/channel" class="flex gap-2 mb-2">
+              <input name="handle" value={esc((await getSetting(c.env, 'youtube_channel_handle', 'awadh_sports.')) || 'awadh_sports.')} placeholder="@awadh_sports." class="flex-1 text-sm rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <button class={btnGhost + ' text-sm shrink-0'}><i class="fas fa-floppy-disk"></i> Save</button>
+            </form>
+            <a href={`https://youtube.com/@${((await getSetting(c.env, 'youtube_channel_handle', 'awadh_sports.')) || 'awadh_sports.').replace(/^@/, '')}`} target="_blank" rel="noopener" class="text-sm text-red-600 font-semibold hover:underline">Open channel →</a>
             {(await getSetting(c.env, 'youtube_last_sync', '')) && (
               <p class="text-xs text-slate-400 mt-2"><i class="fas fa-clock mr-1"></i>Last synced: {esc(await getSetting(c.env, 'youtube_last_sync', ''))} UTC</p>
             )}
@@ -1705,6 +1708,20 @@ adminRoutes.post('/youtube/sync', async (c) => {
   const user = c.get('user')!
   const result = await syncYouTube(c.env, { force: true })
   await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'youtube.sync', details: JSON.stringify(result).slice(0, 200) })
+  return c.redirect(`/admin/youtube?${result.ok ? 'synced=1' : 'syncerr=' + encodeURIComponent(result.error || 'failed')}`)
+})
+
+// Save the channel handle and re-resolve the channel id.
+adminRoutes.post('/youtube/channel', async (c) => {
+  const user = c.get('user')!
+  const f = await c.req.parseBody()
+  let handle = String(f.handle || '').trim().replace(/^https?:\/\/(www\.)?youtube\.com\//, '')
+  if (!handle) handle = 'awadh_sports.'
+  await setSetting(c.env, 'youtube_channel_handle', handle)
+  // Force a fresh resolve on the next sync.
+  await setSetting(c.env, 'youtube_channel_id', '')
+  await logActivity(c.env.DB, { userId: user.id, actor: user.full_name, action: 'youtube.channel', details: handle })
+  const result = await syncYouTube(c.env, { force: true })
   return c.redirect(`/admin/youtube?${result.ok ? 'synced=1' : 'syncerr=' + encodeURIComponent(result.error || 'failed')}`)
 })
 
