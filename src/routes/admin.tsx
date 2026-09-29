@@ -1,3 +1,10 @@
+// ============================================================
+// ADMIN PANEL — poore system ka control centre (sirf admin/manager)
+// Ismein: bookings, customers, employees, roles, events, live control,
+// tasks/production, equipment, media, YouTube, Team/About, portfolio,
+// reports, notifications, CMS, activity logs aur settings.
+// (Har section ke upar alag Hinglish comment bhi hai.)
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { StaffLayout, Notice } from '../lib/staff_layout'

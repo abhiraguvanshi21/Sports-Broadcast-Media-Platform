@@ -1,3 +1,9 @@
+// ============================================================
+// PUBLIC SITE LAYOUT — aam visitor wali website ka dhancha
+// Kaam: header/navbar, user menu, footer, floating Contact button,
+// PageHero aur BRAND details (naam/phone/email/address).
+// Ye layout saare public pages (home, about, services...) me lagta hai.
+// ============================================================
 import type { FC } from 'hono/jsx'
 import type { SessionUser } from './types'
 

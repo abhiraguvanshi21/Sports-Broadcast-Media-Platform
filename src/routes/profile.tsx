@@ -1,3 +1,8 @@
+// ============================================================
+// PROFILE PAGE — har user ki apni profile (/profile)
+// Kaam: naam, phone, email dikhana; details edit karna aur
+// password badalna. Customer ko dark theme, staff ko light theme.
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { PublicLayout, PageHero } from '../lib/public_layout'

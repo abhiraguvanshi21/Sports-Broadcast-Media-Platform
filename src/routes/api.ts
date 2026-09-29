@@ -1,3 +1,10 @@
+// ============================================================
+// API ENDPOINTS — background me kaam karne wale JSON routes (/api/*)
+// Kaam: booking create, OTP maang/verify, contact, job apply,
+// attendance check-in/out, task status, notification read,
+// aur photo/upload (R2) — sab yahan handle hote hain.
+// (Har section ke upar alag Hinglish comment bhi hai.)
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { makeBookingCode, esc, rateLimit } from '../lib/utils'

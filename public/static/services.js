@@ -1,3 +1,8 @@
+/* ============================================================
+   SERVICE DETAILS MODAL — Services page ka popup
+   Kaam: service card pe tap karne se uska detail popup kholna
+   (window.__SERVICES__ ka data use karke).
+   ============================================================ */
 /* AWADH Sports Live — service details modal (opens centered on card tap) */
 (function () {
   'use strict'

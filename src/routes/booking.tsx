@@ -1,3 +1,7 @@
+// ============================================================
+// BOOKING + TRACK — naya booking/quote maangna aur purani booking track karna
+// Kaam: /book form dikhana aur /track se OTP ke zariye booking status dekhna.
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { PublicLayout, PageHero } from '../lib/public_layout'

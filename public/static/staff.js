@@ -1,4 +1,9 @@
 /* ============================================================
+   STAFF / PORTAL JS — admin & portal panel ke scripts
+   Kaam: sidebar toggle, aur image uploader (device/Drive se
+   photo chunna -> frame editor -> /api/upload -> R2 -> URL form me).
+   ============================================================ */
+/* ============================================================
    AWADH Sports Live — staff/portal panel scripts
    • Sidebar toggle
    • Image uploader: pick a file from device / Drive / Photos,

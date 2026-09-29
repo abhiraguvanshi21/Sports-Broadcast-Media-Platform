@@ -1,4 +1,10 @@
 /* ============================================================
+   PHOTO FRAME EDITOR — photo upload se pehle frame set karna
+   Kaam: image choose karne ke baad crop/zoom/move/rotate karne
+   dena aur ratio (1:1, 16:9 …) chunna; "Use this photo" pe
+   canvas se cropped image banake upload ke liye dena.
+   ============================================================ */
+/* ============================================================
    AWADH Sports Live — photo frame editor (crop / zoom / move / rotate)
    ------------------------------------------------------------
    Opens after a user picks an image in an [data-img-upload] field.

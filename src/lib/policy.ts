@@ -1,3 +1,11 @@
+// ============================================================
+// POLICY + SETTINGS — attendance niyam, salary hisaab, app settings
+// Kaam:
+//   • Attendance policy (09:00 IST ke baad check-in => half day)
+//   • Salary compute karna (present / half-day / absent ke hisaab se)
+//   • app_settings (key-value) padhna/likhna — YouTube sync state,
+//     timeout timezone wagairah sab yahin se aate hain.
+// ============================================================
 import type { Bindings } from './types'
 
 // ============================================================

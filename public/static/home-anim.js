@@ -1,4 +1,9 @@
 /* ============================================================
+   HOME PAGE ANIMATIONS — home page ke numbers/hero animation
+   Kaam: hero ke stats (jaise 500+ matches) ko count-up karna
+   jab wo screen pe aaye.
+   ============================================================ */
+/* ============================================================
    AWADH Sports Live — home animations (box-free)
    • Hero background: pure-CSS aurora + floating icons (no JS needed)
    • Stats: count-up numbers when the hero scrolls into view

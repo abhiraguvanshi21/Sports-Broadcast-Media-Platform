@@ -1,3 +1,6 @@
+// ============================================================
+// TYPESCRIPT CONFIG — TS compiler ki setting (JSX = Hono)
+// ============================================================
 {
   "compilerOptions": {
     "target": "ESNext",

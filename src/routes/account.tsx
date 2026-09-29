@@ -1,3 +1,8 @@
+// ============================================================
+// CUSTOMER DASHBOARD — sirf customer ke liye (/account)
+// Kaam: apni bookings, unke status/message/quotation dekhna,
+// booking detail kholna aur apni profile update karna.
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { PublicLayout, PageHero } from '../lib/public_layout'

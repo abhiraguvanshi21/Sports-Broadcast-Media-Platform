@@ -1,3 +1,9 @@
+// ============================================================
+// PUBLIC WEBSITE PAGES — aam logon ke liye saare pages
+// Ismein: Home, About, Services, Portfolio, Events, Event detail,
+// Live hub, Media Gallery, Contact aur Careers.
+// (Har section ke upar alag Hinglish comment bhi hai.)
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { PublicLayout, PageHero, BRAND } from '../lib/public_layout'

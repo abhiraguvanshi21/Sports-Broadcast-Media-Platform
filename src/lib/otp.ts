@@ -1,3 +1,8 @@
+// ============================================================
+// OTP HELPERS — booking track karne ka "code/OTP" system
+// Kaam: OTP generate/verify karna aur kuch common helpers ko
+// ek hi jagah se re-export karna (routes import kar sakein).
+// ============================================================
 import type { Bindings } from './types'
 
 // Re-exported helpers so routes can import from one place

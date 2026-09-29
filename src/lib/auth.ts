@@ -1,3 +1,10 @@
+// ============================================================
+// AUTH / SECURITY — login ka dimaag
+// Kaam:
+//   • Password ko hash karna / check karna (PBKDF2-SHA256, WebCrypto)
+//   • Session banana, todna aur cookie sambhalna
+//   • Role permissions (kaun kaunsa module dekh sakta hai — canAccess)
+// ============================================================
 import type { Bindings, Role, SessionUser } from './types'
 
 // ============================================================

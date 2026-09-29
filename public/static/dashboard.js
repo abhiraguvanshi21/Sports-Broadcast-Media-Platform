@@ -1,3 +1,8 @@
+/* ============================================================
+   EMPLOYEE DASHBOARD JS — attendance check-in / check-out
+   Kaam: portal ke dashboard pe Check-In / Check-Out buttons ko
+   API se jodna aur success/error message dikhana.
+   ============================================================ */
 /* AWADH Sports Live — employee dashboard: attendance check-in / check-out */
 (function () {
   var ci = document.getElementById('btn-checkin')

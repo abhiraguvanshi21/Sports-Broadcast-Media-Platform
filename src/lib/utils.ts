@@ -1,3 +1,8 @@
+// ============================================================
+// COMMON HELPERS — chhote kaam ki cheezein (sab jagah use hoti hain)
+// Kaam: date/time paisa format karna, slug banana, text safe (esc) karna,
+// rate-limit, aur activity log likhna.
+// ============================================================
 import { CHIP_CLASS, BOOKING_STATUS, EVENT_STATUS, TASK_STATUS } from './types'
 
 export function fmtDate(d?: string | null): string {

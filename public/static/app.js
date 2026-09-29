@@ -1,3 +1,8 @@
+/* ============================================================
+   PUBLIC SITE JS — aam website ke chhote interactions
+   Kaam: mobile menu (hamburger) kholna/band karna aur baaki
+   basic UI behaviour (scroll, FAQ, etc.).
+   ============================================================ */
 /* PrimeCast — public site JS */
 (function () {
   'use strict'

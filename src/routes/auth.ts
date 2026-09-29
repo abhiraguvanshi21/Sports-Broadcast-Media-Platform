@@ -1,3 +1,8 @@
+// ============================================================
+// LOGIN / REGISTER / LOGOUT — login yahin se hota hai
+// Kaam: sign-in form, sign-up (naya account), aur logout handle karna.
+// Login ke baad role ke hisaab se sahi dashboard pe bhejna.
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { verifyPassword, createSession, destroySession, hashPassword, SESSION_COOKIE, dashboardHome } from '../lib/auth'

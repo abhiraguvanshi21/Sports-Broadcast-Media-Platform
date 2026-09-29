@@ -1,3 +1,8 @@
+// ============================================================
+// SHARED UI COMPONENTS — baar-baar use hone wale tukde
+// Kaam: Card, Stat (dashboard number), Table, Field, buttons,
+// Chip aur Image upload field (photo + frame editor) banana.
+// ============================================================
 import type { FC, Child } from 'hono/jsx'
 import { statusClass, statusLabel } from './utils'
 

@@ -1,3 +1,10 @@
+// ============================================================
+// YOUTUBE AUTO-SYNC — AWADH Sports channel se videos khud laana
+// Kaam: channel id nikalna (@handle se), RSS feed se latest videos,
+// aur /streams page se LIVE + UPCOMING detect karke D1 (youtube_videos)
+// me save karna. Bina kisi API key ke — public YouTube endpoints se.
+// NOTE: asli handle hai "@awadh_sports." (aakhir me DOT hai).
+// ============================================================
 import type { Bindings } from './types'
 import { getSetting, setSetting } from './policy'
 

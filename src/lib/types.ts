@@ -1,3 +1,8 @@
+// ============================================================
+// TYPES — sab data structures ki definition (TypeScript)
+// Kaam: Bindings (D1 DB, R2 storage, ASSETS), roles, status labels
+// aur colour chips batana — taki poore code me ek jaisa type chale.
+// ============================================================
 export type Bindings = {
   DB: D1Database
   R2?: R2Bucket

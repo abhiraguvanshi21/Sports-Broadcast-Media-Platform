@@ -1,3 +1,10 @@
+// ============================================================
+// EMPLOYEE PORTAL — staff ka apna kaam wala dashboard
+// Ismein: dashboard, attendance (check-in/out), mere tasks, mere events,
+// production schedule, equipment, media upload, issue report, leave
+// aur notifications.
+// (Har section ke upar alag Hinglish comment bhi hai.)
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from '../lib/types'
 import { StaffLayout, Notice } from '../lib/staff_layout'

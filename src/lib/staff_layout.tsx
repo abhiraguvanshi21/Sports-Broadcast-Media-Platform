@@ -1,3 +1,8 @@
+// ============================================================
+// STAFF LAYOUT — Admin + Employee panel ka dhancha (light theme)
+// Kaam: left sidebar (group ke saath), topbar aur Notice (success/error)
+// dikhana. Admin aur Portal dono pages isi layout ko use karte hain.
+// ============================================================
 import type { FC } from 'hono/jsx'
 import type { SessionUser } from './types'
 import { canAccess, type Module } from './auth'

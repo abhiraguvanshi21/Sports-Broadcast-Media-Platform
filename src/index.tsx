@@ -1,3 +1,11 @@
+// ============================================================
+// MAIN ENTRY POINT — poori website ka "darwaza" (server start yahin se)
+// Kaam: sab route groups ko jodna hai —
+//   public site, booking, login/register, profile, customer account,
+//   employee portal, admin panel aur API.
+// Saath hi /static files aur R2 (/media/*) me pade photos serve karna,
+// aur har request pe logged-in user nikalna (session).
+// ============================================================
 import { Hono } from 'hono'
 import type { AppEnv } from './lib/types'
 import { getSessionUser, SESSION_COOKIE } from './lib/auth'

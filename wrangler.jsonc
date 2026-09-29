@@ -1,3 +1,8 @@
+// ============================================================
+// WRANGLER CONFIG — Cloudflare deploy ki setting
+// Kaam: project ka naam, build output folder, D1 database binding (DB)
+// aur R2 bucket binding (R2 — photo storage) batana.
+// ============================================================
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "webapp",

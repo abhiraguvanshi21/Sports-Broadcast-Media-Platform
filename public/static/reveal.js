@@ -1,4 +1,10 @@
 /* ============================================================
+   SCROLL ANIMATION ENGINE — home/about/services ka animation dimaag
+   Kaam: scroll pe elements ko reveal karna (.reveal/.stagger),
+   3D tilt (.tilt), cursor spotlight (.spot), number count-up
+   aur halka parallax. Reduced-motion wale users ke liye band.
+   ============================================================ */
+/* ============================================================
    AWADH Sports Live — shared page animation engine
    Drives the CSS animation system used by home / about / services.
      • .reveal / .stagger   → reveal on scroll into view
