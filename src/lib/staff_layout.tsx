@@ -77,9 +77,9 @@ export const StaffLayout: FC<{
         <link href="/static/admin.css" rel="stylesheet" />
       </head>
       <body class="staff-app antialiased">
-        <div class="flex min-h-screen">
-          {/* Sidebar */}
-          <aside id="sidebar" class="side-nav fixed lg:sticky top-0 z-40 h-screen w-64 shrink-0 text-slate-300 flex flex-col -translate-x-full lg:translate-x-0 transition-transform">
+        <div id="app-shell" class="flex min-h-screen">
+          {/* Sidebar — on phones this is a slide-in drawer (backdrop + tap-out to close) */}
+          <aside id="sidebar" class="side-nav fixed lg:sticky top-0 z-40 h-screen w-64 max-w-[86vw] shrink-0 text-slate-300 flex flex-col -translate-x-full lg:translate-x-0 transition-transform shadow-2xl lg:shadow-none">
             <div class="side-nav__brand h-16 flex items-center gap-2.5 px-5">
               <img src="/static/logo-icon.png" alt="AWADH Sports Live" class="w-9 h-9 rounded-lg object-cover ring-1 ring-white/15" />
               <span class="leading-none font-extrabold text-white">
@@ -113,12 +113,15 @@ export const StaffLayout: FC<{
             </div>
           </aside>
 
+          {/* Mobile drawer backdrop — tap to close */}
+          <div id="sidebar-backdrop" class="side-backdrop lg:hidden" aria-hidden="true"></div>
+
           {/* Main */}
           <div class="flex-1 min-w-0 flex flex-col">
-            <header class="topbar sticky top-0 z-30 h-16 flex items-center justify-between px-4 sm:px-6">
-              <div class="flex items-center gap-3">
-                <button id="sidebar-toggle" class="lg:hidden w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-600"><i class="fas fa-bars"></i></button>
-                <h1 class="font-bold text-slate-900 text-lg">{title}</h1>
+            <header class="topbar sticky top-0 z-30 h-16 flex items-center justify-between gap-3 px-4 sm:px-6">
+              <div class="flex items-center gap-3 min-w-0">
+                <button id="sidebar-toggle" class="lg:hidden w-9 h-9 shrink-0 rounded-lg hover:bg-slate-100 text-slate-600" aria-label="Toggle menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
+                <h1 class="font-bold text-slate-900 text-base sm:text-lg truncate">{title}</h1>
               </div>
               <div class="flex items-center gap-3">
                 <span class={`hidden sm:inline-flex px-2.5 py-1 rounded-full text-xs font-bold text-white ${roleBadge} uppercase`}>{user.role}</span>
@@ -126,14 +129,14 @@ export const StaffLayout: FC<{
                   <div class="w-9 h-9 rounded-full bg-gradient-to-br from-red-600 to-orange-500 text-white flex items-center justify-center font-bold text-sm">
                     {user.full_name.charAt(0).toUpperCase()}
                   </div>
-                  <div class="hidden sm:block leading-tight">
-                    <div class="text-sm font-semibold text-slate-800">{user.full_name}</div>
-                    <div class="text-xs text-slate-500">{user.email}</div>
+                  <div class="hidden sm:block leading-tight min-w-0 max-w-[11rem]">
+                    <div class="text-sm font-semibold text-slate-800 truncate">{user.full_name}</div>
+                    <div class="text-xs text-slate-500 truncate">{user.email}</div>
                   </div>
                 </div>
               </div>
             </header>
-            <main class="flex-1 p-4 sm:p-6 max-w-[1400px] w-full mx-auto">{children}</main>
+            <main class="flex-1 min-w-0 p-3.5 sm:p-6 max-w-[1400px] w-full mx-auto">{children}</main>
           </div>
         </div>
         <script src="/static/reveal.js"></script>

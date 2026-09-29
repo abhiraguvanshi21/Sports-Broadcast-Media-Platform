@@ -81,8 +81,8 @@ app.onError((err, c) => {
   console.error('Unhandled error:', err)
   if (c.req.path.startsWith('/api/')) return c.json({ error: 'Internal error' }, 500)
   return c.html(
-    `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Error · AWADH Sports Live</title><script src="https://cdn.tailwindcss.com"></script></head>
-    <body class="bg-slate-950 text-slate-100 flex items-center justify-center min-h-screen"><div class="text-center">
+    `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Error · AWADH Sports Live</title><script src="https://cdn.tailwindcss.com"></script></head>
+    <body class="bg-slate-950 text-slate-100 flex items-center justify-center min-h-screen px-4"><div class="text-center">
       <div class="text-5xl font-black text-red-500">500</div><p class="text-slate-400 mt-2">Something went wrong.</p>
       <a href="/" class="inline-flex mt-6 px-5 py-2.5 rounded-xl bg-white text-slate-900 font-semibold">Back to Home</a>
     </div></body></html>`,

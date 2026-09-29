@@ -133,6 +133,60 @@ body.staff-app {
 }
 
 /* ============================================================
+   MOBILE / TABLET RESPONSIVENESS
+   Phones par sab kuch sahi size me dikhe — koi horizontal scroll
+   ya cut-off na ho. Sidebar ek slide-in drawer ban jaata hai.
+   ============================================================ */
+
+/* Backdrop behind the mobile sidebar drawer (tap to close) */
+.side-backdrop {
+  position: fixed; inset: 0; z-index: 35;
+  background: rgba(6, 8, 15, 0.55);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s ease;
+}
+.side-backdrop.is-open { opacity: 1; visibility: visible; }
+body.nav-open { overflow: hidden; }
+
+/* Never allow the page itself to scroll sideways */
+body.staff-app { overflow-x: hidden; }
+body.staff-app img, body.staff-app video, body.staff-app canvas { max-width: 100%; height: auto; }
+
+/* Tables scroll horizontally instead of breaking the layout */
+.ui-table { -webkit-overflow-scrolling: touch; }
+.ui-table table { min-width: 34rem; }
+
+@media (max-width: 1023px) {
+  /* Sidebar drawer sits above everything on small screens */
+  .side-nav { box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.6); }
+  .side-nav__link { padding: .7rem .8rem; font-size: .9rem; }
+}
+
+@media (max-width: 640px) {
+  /* Tighter padding so content fits nicely on phones */
+  .ui-card { border-radius: 1rem; }
+  .ui-stat { padding: 1rem 1.05rem; border-radius: 1rem; }
+  .ui-stat .text-3xl { font-size: 1.6rem; }
+
+  /* Big KPI numbers/badges shrink a bit */
+  main h1, main h2 { word-break: break-word; }
+
+  /* Stat grids: 2-up on phones instead of a single tall column */
+  main .grid.sm\:grid-cols-2.lg\:grid-cols-4,
+  main .grid.sm\:grid-cols-2.lg\:grid-cols-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* Forms: full-width controls, keyboard-friendly */
+  input, select, textarea, button { font-size: 16px; } /* stops iOS zoom-on-focus */
+  form .flex.items-end, form.flex.flex-wrap { row-gap: .6rem; }
+}
+
+@media (max-width: 400px) {
+  /* Very small phones (iPhone SE etc.) */
+  main .grid.sm\:grid-cols-2.lg\:grid-cols-4,
+  main .grid.sm\:grid-cols-2.lg\:grid-cols-5 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ============================================================
    PHOTO FRAME EDITOR (crop / zoom / move / rotate)
    Opened from any [data-img-upload] field before upload.
    ============================================================ */

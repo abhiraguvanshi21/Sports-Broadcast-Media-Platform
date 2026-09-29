@@ -635,3 +635,49 @@ body.staff-app  .pf-note { color: #94a3b8; }
   .pf-avatar-ring, .pf-id__glow, .pf-id__online { animation: none !important; }
   .pf-link:hover { transform: none; }
 }
+
+/* ============================================================
+   MOBILE / TABLET RESPONSIVENESS (public site)
+   Har phone par layout sahi dikhe — koi horizontal scroll,
+   cut-off text ya overflow na ho.
+   ============================================================ */
+body.site-public { overflow-x: hidden; }
+body.site-public img, body.site-public video, body.site-public iframe { max-width: 100%; }
+
+@media (max-width: 640px) {
+  /* Hero + long headings wrap instead of overflowing */
+  .site-public h1, .site-public h2, .site-public h3 { overflow-wrap: anywhere; word-break: break-word; }
+
+  /* The 3-up stats row under the hero gets a bit tighter */
+  .site-public .grid.grid-cols-3 { gap: 1rem; }
+  .site-public .grid.grid-cols-3 .text-3xl { font-size: 1.5rem; }
+
+  /* Section padding: less wasted space on small screens */
+  .site-public section { scroll-margin-top: 4.5rem; }
+
+  /* Floating contact button: slightly smaller + closer to the edge */
+  .contact-fab { right: .85rem; bottom: .85rem; }
+  .contact-fab__btn { padding: .7rem; }
+
+  /* Service modal fills more of a small screen */
+  .service-modal { padding: .75rem; }
+  .service-modal__box { padding: 1.25rem; max-height: 88vh; border-radius: 1.15rem; }
+
+  /* Marquee items a touch smaller */
+  .brand-marquee__track { gap: 1.6rem; }
+
+  /* Profile identity card padding */
+  .pf-id { padding: 1.5rem 1.1rem 1.35rem; }
+  .pf-avatar { width: 4.6rem; height: 4.6rem; font-size: 1.7rem; }
+
+  /* Ribbon / rail: keep dots from pushing content off-screen */
+  .rail__dot { width: 2.6rem; height: 2.6rem; }
+  .rail::before { left: 1.3rem; }
+}
+
+@media (max-width: 400px) {
+  .site-public .grid.grid-cols-3 { gap: .75rem; }
+  .site-public .grid.grid-cols-3 .text-3xl { font-size: 1.3rem; }
+  .site-public h1 { word-break: break-word; }
+}
+

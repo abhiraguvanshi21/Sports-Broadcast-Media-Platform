@@ -11,21 +11,60 @@
      hidden input so the form submits a normal URL value.
    ============================================================ */
 (function () {
-  /* ---------- Sidebar toggle ---------- */
+  /* ---------- Sidebar drawer (mobile) ---------- */
   var toggle = document.getElementById('sidebar-toggle')
   var sidebar = document.getElementById('sidebar')
+  var backdrop = document.getElementById('sidebar-backdrop')
+
+  function isOpen() {
+    return sidebar && !sidebar.classList.contains('-translate-x-full')
+  }
+  function openNav() {
+    if (!sidebar) return
+    sidebar.classList.remove('-translate-x-full')
+    if (backdrop) backdrop.classList.add('is-open')
+    document.body.classList.add('nav-open')
+    if (toggle) toggle.setAttribute('aria-expanded', 'true')
+  }
+  function closeNav() {
+    if (!sidebar) return
+    sidebar.classList.add('-translate-x-full')
+    if (backdrop) backdrop.classList.remove('is-open')
+    document.body.classList.remove('nav-open')
+    if (toggle) toggle.setAttribute('aria-expanded', 'false')
+  }
+
   if (toggle && sidebar) {
     toggle.addEventListener('click', function () {
-      sidebar.classList.toggle('-translate-x-full')
+      if (window.innerWidth >= 1024) return
+      if (isOpen()) closeNav()
+      else openNav()
     })
   }
+  if (backdrop) backdrop.addEventListener('click', closeNav)
+
+  // Escape closes the drawer
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && isOpen()) closeNav()
+  })
+
+  // Tapping any nav link closes the drawer on phones
   if (sidebar) {
-    sidebar.querySelectorAll('nav a').forEach(function (a) {
-      a.addEventListener('click', function () {
-        if (window.innerWidth < 1024) sidebar.classList.add('-translate-x-full')
+    sidebar.querySelectorAll('a, button').forEach(function (el) {
+      el.addEventListener('click', function () {
+        if (window.innerWidth < 1024) closeNav()
       })
     })
   }
+
+  // If the viewport grows to desktop, make sure the drawer state is reset
+  var lastW = window.innerWidth
+  window.addEventListener('resize', function () {
+    if (window.innerWidth >= 1024 && lastW < 1024) {
+      closeNav()
+    }
+    lastW = window.innerWidth
+  })
 
   /* ---------- Image uploader ---------- */
   function humanSize(n) {
