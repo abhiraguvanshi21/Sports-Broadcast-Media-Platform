@@ -1898,110 +1898,325 @@ adminRoutes.get('/users', async (c) => {
 
 // ============================================================
 // ATTENDANCE TRACKING — admin monitors every employee's attendance
+// Day-wise roster (saare employees) + date picker + absent/leave/rest marking
+// + individual employee view (employee select karke uski poori history).
 // ============================================================
 adminRoutes.get('/attendance', async (c) => {
   const user = c.get('user')!
-  const day = c.req.query('day') || new Date().toISOString().slice(0, 10)
-  const [today, summary, perEmp, recent] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT a.*, u.full_name, u.email, e.emp_code, e.department, e.designation
-         FROM attendance a JOIN employees e ON e.id=a.employee_id JOIN users u ON u.id=e.user_id
-        WHERE a.work_date=? ORDER BY u.full_name`
-    ).bind(day).all(),
-    c.env.DB.prepare(
+  const day = c.req.query('day') || istNow().date
+  const empId = Number(c.req.query('emp') || 0)
+  const month = c.req.query('month') || day.slice(0, 7)
+
+  // Day-wise roster: every ACTIVE employee, joined with their attendance for `day`
+  // (LEFT JOIN so employees who did NOT check in still show as "not marked").
+  const roster = await c.env.DB.prepare(
+    `SELECT e.id AS employee_id, u.full_name, u.email, e.emp_code, e.department, e.designation,
+            e.monthly_salary,
+            a.id AS att_id, a.check_in, a.check_out, a.status, a.notes
+       FROM employees e JOIN users u ON u.id=e.user_id
+       LEFT JOIN attendance a ON a.employee_id=e.id AND a.work_date=?
+      WHERE e.status='active'
+      ORDER BY u.full_name`
+  ).bind(day).all()
+
+  // Day-wise counts
+  const summary = await c.env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM employees WHERE status='active') AS active_emp,
+       (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status IN ('present','late')) AS present_day,
+       (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='late') AS late_day,
+       (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='half_day') AS half_day,
+       (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='absent') AS absent_day,
+       (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='leave') AS leave_day,
+       (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='rest') AS rest_day`
+  ).bind(day, day, day, day, day, day).first<any>()
+
+  let selected: any = null
+  let indivRows: any[] = []
+  let indivSummary: any = null
+  if (empId) {
+    selected = await c.env.DB.prepare(
+      `SELECT e.id, u.full_name, u.email, e.emp_code, e.department, e.designation, e.monthly_salary, e.joining_date
+         FROM employees e JOIN users u ON u.id=e.user_id WHERE e.id=?`
+    ).bind(empId).first<any>()
+    const rows = await c.env.DB.prepare(
+      `SELECT * FROM attendance WHERE employee_id=? AND strftime('%Y-%m', work_date)=? ORDER BY work_date DESC`
+    ).bind(empId, month).all()
+    indivRows = rows.results as any[]
+    indivSummary = await c.env.DB.prepare(
       `SELECT
-         (SELECT COUNT(*) FROM employees WHERE status='active') AS active_emp,
-         (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status IN ('present','late')) AS present_today,
-         (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='late') AS late_today,
-         (SELECT COUNT(*) FROM attendance WHERE work_date=? AND status='absent') AS absent_today,
-         (SELECT COUNT(*) FROM attendance WHERE strftime('%Y-%m', work_date)=strftime('%Y-%m','now') AND status IN ('present','late')) AS month_present`
-    ).bind(day, day, day).first<any>(),
-    c.env.DB.prepare(
-      `SELECT e.id, u.full_name, e.emp_code, e.department,
-              (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND strftime('%Y-%m', a.work_date)=strftime('%Y-%m','now') AND a.status IN ('present','late')) AS present_m,
-              (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND strftime('%Y-%m', a.work_date)=strftime('%Y-%m','now') AND a.status='late') AS late_m,
-              (SELECT COUNT(*) FROM attendance a WHERE a.employee_id=e.id AND strftime('%Y-%m', a.work_date)=strftime('%Y-%m','now') AND a.status='absent') AS absent_m,
-              (SELECT a.status FROM attendance a WHERE a.employee_id=e.id AND a.work_date=? ) AS today_status
-         FROM employees e JOIN users u ON u.id=e.user_id
-        ORDER BY u.full_name`
-    ).bind(day).all(),
-    c.env.DB.prepare(
-      `SELECT a.*, u.full_name FROM attendance a JOIN employees e ON e.id=a.employee_id JOIN users u ON u.id=e.user_id
-        ORDER BY a.work_date DESC, a.check_in DESC LIMIT 25`
-    ).all(),
-  ])
-  const present = today.results as any[]
+         SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) present,
+         SUM(CASE WHEN status='late' THEN 1 ELSE 0 END) late,
+         SUM(CASE WHEN status='half_day' THEN 1 ELSE 0 END) half_day,
+         SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) absent,
+         SUM(CASE WHEN status='leave' THEN 1 ELSE 0 END) leave,
+         SUM(CASE WHEN status='rest' THEN 1 ELSE 0 END) rest
+       FROM attendance WHERE employee_id=? AND strftime('%Y-%m', work_date)=?`
+    ).bind(empId, month).first<any>()
+  }
+
+  const recent = await c.env.DB.prepare(
+    `SELECT a.*, u.full_name FROM attendance a JOIN employees e ON e.id=a.employee_id JOIN users u ON u.id=e.user_id
+      ORDER BY a.work_date DESC, a.check_in DESC LIMIT 12`
+  ).all()
+
+  const rows = roster.results as any[]
+  const marked = rows.filter((r) => r.att_id)
+  const notMarked = rows.filter((r) => !r.att_id)
+  const salaryInfo = selected ? computeSalary({
+    monthlySalary: selected.monthly_salary,
+    workingDays: Number(await getSetting(c.env, 'salary_working_days', '30')) || 30,
+    present: indivSummary?.present ?? 0,
+    halfDay: indivSummary?.half_day ?? 0,
+    absent: indivSummary?.absent ?? 0,
+    leave: indivSummary?.leave ?? 0,
+  }) : null
+
+  const StatusPicker = ({ employeeId, current }: { employeeId: number; current?: string | null }) => (
+    <form method="post" action="/admin/attendance/mark" class="flex items-center gap-1.5">
+      <input type="hidden" name="employee_id" value={String(employeeId)} />
+      <input type="hidden" name="work_date" value={day} />
+      <input type="hidden" name="back" value={`/admin/attendance?day=${day}${empId ? '&emp=' + empId : ''}`} />
+      <select name="status" class="text-xs rounded-lg border border-slate-300 px-2 py-1.5 bg-white">
+        <option value="present" selected={current === 'present'}>Present</option>
+        <option value="late" selected={current === 'late'}>Late</option>
+        <option value="half_day" selected={current === 'half_day'}>Half Day</option>
+        <option value="absent" selected={current === 'absent'}>Absent</option>
+        <option value="leave" selected={current === 'leave'}>Leave</option>
+        <option value="rest" selected={current === 'rest'}>Rest / Off</option>
+      </select>
+      <button class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800">Save</button>
+    </form>
+  )
+
   return c.html(
     <StaffLayout user={user} nav="admin" current="/admin/attendance" title="Attendance Tracking">
-      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Stat label="Active employees" value={summary?.active_emp ?? 0} icon="fa-id-badge" tone="bg-slate-100 text-slate-600" />
-        <Stat label={`Present (${day})`} value={summary?.present_today ?? 0} icon="fa-fingerprint" tone="bg-emerald-50 text-emerald-600" />
-        <Stat label="Late today" value={summary?.late_today ?? 0} icon="fa-clock" tone="bg-amber-50 text-amber-600" />
-        <Stat label="Absent today" value={summary?.absent_today ?? 0} icon="fa-xmark" tone="bg-rose-50 text-rose-600" />
-        <Stat label="Present this month" value={summary?.month_present ?? 0} icon="fa-calendar-check" tone="bg-cyan-50 text-cyan-600" />
+        <Stat label={`Present (${day})`} value={summary?.present_day ?? 0} icon="fa-fingerprint" tone="bg-emerald-50 text-emerald-600" sub={`${summary?.late_day ?? 0} late`} />
+        <Stat label={`Absent (${day})`} value={summary?.absent_day ?? 0} icon="fa-user-xmark" tone="bg-rose-50 text-rose-600" sub={`${summary?.leave_day ?? 0} leave · ${summary?.rest_day ?? 0} rest`} />
+        <Stat label="Not marked" value={notMarked.length} icon="fa-circle-question" tone="bg-amber-50 text-amber-600" />
       </div>
 
+      {/* Date picker + employee selector */}
       <Card class="p-4 mb-6">
         <form method="get" action="/admin/attendance" class="flex flex-wrap items-end gap-3">
           <Field label="View date"><input type="date" name="day" value={day} class={inputCls} /></Field>
+          <Field label="Employee (individual view)">
+            <select name="emp" class={inputCls}>
+              <option value="0">All employees</option>
+              {rows.map((r) => (
+                <option value={String(r.employee_id)} selected={r.employee_id === empId}>{esc(r.full_name)}{r.emp_code ? ` (${r.emp_code})` : ''}</option>
+              ))}
+            </select>
+          </Field>
           <button class={btnPrimary}>Load</button>
-          <a href={`/admin/attendance/export?day=${day}`} class={btnGhost}><i class="fas fa-file-csv"></i> Export CSV</a>
+          <a href={`/admin/attendance/export?day=${day}`} class={btnGhost}><i class="fas fa-file-csv"></i> Export day</a>
         </form>
+        <p class="text-xs text-slate-500 mt-3"><i class="fas fa-circle-info text-red-500 mr-1"></i> Har date ke liye poora roster dikhta hai. Jo employee check-in nahi kar paya (rest / team member absent) uske liye admin yahin <b>Absent</b>, <b>Leave</b> ya <b>Rest</b> mark kar sakta hai.</p>
       </Card>
 
-      <div class="grid lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2">
-          <h2 class="font-bold text-slate-900 mb-3">Checked in on {day}</h2>
-          {present.length === 0 ? <Empty icon="fa-fingerprint" title="No attendance marked" text="No employee has checked in on this date." /> : (
-            <Table cols={['Employee', 'Code', 'Department', 'Check in', 'Check out', 'Status']}>
-              {present.map((r) => (
+      {empId && selected ? (
+        /* ============ INDIVIDUAL EMPLOYEE VIEW ============ */
+        <>
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-12 h-12 rounded-xl text-white font-bold flex items-center justify-center text-lg" style="background-image:linear-gradient(120deg,#ff3d00,#ff8a00)">
+                {esc((selected.full_name || 'U').split(/\s+/).map((w: string) => w[0]).join('').slice(0, 2).toUpperCase())}
+              </span>
+              <div>
+                <div class="font-bold text-slate-900 text-lg">{esc(selected.full_name)}</div>
+                <div class="text-xs text-slate-500">{esc(selected.emp_code || '—')} · {esc(selected.designation || selected.department || 'Employee')}</div>
+              </div>
+            </div>
+            <form method="get" action="/admin/attendance" class="flex items-end gap-2">
+              <input type="hidden" name="emp" value={String(empId)} />
+              <input type="hidden" name="day" value={day} />
+              <Field label="Month"><input type="month" name="month" value={month} class={inputCls} /></Field>
+              <button class={btnGhost}>Load month</button>
+              <a href="/admin/attendance" class={btnGhost}>All employees</a>
+            </form>
+          </div>
+
+          <div class="grid sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+            <Stat label="Present" value={indivSummary?.present ?? 0} icon="fa-check" tone="bg-emerald-50 text-emerald-600" />
+            <Stat label="Late" value={indivSummary?.late ?? 0} icon="fa-clock" tone="bg-amber-50 text-amber-600" />
+            <Stat label="Half day" value={indivSummary?.half_day ?? 0} icon="fa-circle-half-stroke" tone="bg-orange-50 text-orange-600" />
+            <Stat label="Absent" value={indivSummary?.absent ?? 0} icon="fa-xmark" tone="bg-rose-50 text-rose-600" />
+            <Stat label="Leave" value={indivSummary?.leave ?? 0} icon="fa-plane-departure" tone="bg-blue-50 text-blue-600" />
+            <Stat label="Rest / Off" value={indivSummary?.rest ?? 0} icon="fa-mug-hot" tone="bg-slate-100 text-slate-600" />
+          </div>
+
+          {salaryInfo && salaryInfo.configured && (
+            <Card class="p-4 mb-6">
+              <div class="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
+                <span class="text-slate-500">Monthly salary <b class="text-slate-800">{fmtMoney(Number(selected.monthly_salary) || 0)}</b></span>
+                <span class="text-slate-500">Per day <b class="text-slate-800">{fmtMoney(salaryInfo.perDay)}</b></span>
+                <span class="text-slate-500">Deduction (this month) <b class="text-rose-600">{fmtMoney(salaryInfo.deduction)}</b></span>
+                <span class="text-slate-500">Net payable <b class="text-emerald-600">{fmtMoney(salaryInfo.netPay)}</b></span>
+                <a href={`/admin/salary?month=${month}`} class="text-red-600 font-semibold hover:underline text-xs ml-auto">Open salary sheet →</a>
+              </div>
+            </Card>
+          )}
+
+          <h2 class="font-bold text-slate-900 mb-3">Day-wise record — {month}</h2>
+          {indivRows.length === 0 ? <Empty icon="fa-fingerprint" title="No records this month" text="Mark a day on the roster to create a record." /> : (
+            <Table cols={['Date', 'Check in', 'Check out', 'Status', 'Notes', 'Update']}>
+              {indivRows.map((r) => (
                 <tr class="hover:bg-slate-50">
-                  <td class="px-4 py-3 font-medium text-slate-800">{esc(r.full_name)}</td>
-                  <td class="px-4 py-3 text-slate-500 font-mono text-xs">{esc(r.emp_code || '—')}</td>
-                  <td class="px-4 py-3 text-slate-500">{esc(r.department || '—')}</td>
-                  <td class="px-4 py-3 text-slate-500">{r.check_in ? fmtDateTime(r.check_in).split(', ')[1] : '—'}</td>
-                  <td class="px-4 py-3 text-slate-500">{r.check_out ? fmtDateTime(r.check_out).split(', ')[1] : '—'}</td>
+                  <td class="px-4 py-3 font-medium text-slate-700">{fmtDate(r.work_date)}</td>
+                  <td class="px-4 py-3 text-slate-500">{r.check_in ? String(r.check_in).slice(11, 16) : '—'}</td>
+                  <td class="px-4 py-3 text-slate-500">{r.check_out ? String(r.check_out).slice(11, 16) : '—'}</td>
                   <td class="px-4 py-3"><Chip status={r.status} /></td>
+                  <td class="px-4 py-3 text-slate-400 text-xs">{esc(r.notes || '')}</td>
+                  <td class="px-4 py-3">
+                    <form method="post" action="/admin/attendance/mark" class="flex items-center gap-1.5">
+                      <input type="hidden" name="employee_id" value={String(empId)} />
+                      <input type="hidden" name="work_date" value={String(r.work_date).slice(0, 10)} />
+                      <input type="hidden" name="back" value={`/admin/attendance?day=${day}&emp=${empId}&month=${month}`} />
+                      <select name="status" class="text-xs rounded-lg border border-slate-300 px-2 py-1.5 bg-white">
+                        <option value="present" selected={r.status === 'present'}>Present</option>
+                        <option value="late" selected={r.status === 'late'}>Late</option>
+                        <option value="half_day" selected={r.status === 'half_day'}>Half Day</option>
+                        <option value="absent" selected={r.status === 'absent'}>Absent</option>
+                        <option value="leave" selected={r.status === 'leave'}>Leave</option>
+                        <option value="rest" selected={r.status === 'rest'}>Rest / Off</option>
+                      </select>
+                      <button class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800">Save</button>
+                    </form>
+                  </td>
                 </tr>
               ))}
             </Table>
           )}
-        </div>
-        <div>
-          <h2 class="font-bold text-slate-900 mb-3">Recent attendance</h2>
-          <div class="space-y-2">
-            {recent.results.length === 0 && <Empty icon="fa-clock-rotate-left" title="No records yet" />}
-            {(recent.results as any[]).map((r) => (
-              <Card class="p-3">
-                <div class="flex items-center justify-between gap-2">
-                  <div class="min-w-0">
-                    <div class="text-sm font-semibold text-slate-700 truncate">{esc(r.full_name)}</div>
-                    <div class="text-xs text-slate-400">{fmtDate(r.work_date)} · {r.check_in ? fmtDateTime(r.check_in).split(', ')[1] : '—'}</div>
-                  </div>
-                  <Chip status={r.status} />
+        </>
+      ) : (
+        /* ============ DAY-WISE ROSTER (ALL EMPLOYEES) ============ */
+        <>
+          <h2 class="font-bold text-slate-900 mb-3">Roster — {day} ({rows.length} employees)</h2>
+          <Table cols={['Employee', 'Code', 'Department', 'Check in', 'Check out', 'Status', 'Mark / Update']}>
+            {rows.length === 0 && <tr><td colspan={7}><Empty icon="fa-users" title="No active employees" /></td></tr>}
+            {rows.map((r) => (
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3">
+                  <a href={`/admin/attendance?day=${day}&emp=${r.employee_id}&month=${month}`} class="font-medium text-slate-800 hover:text-red-600 hover:underline">{esc(r.full_name)}</a>
+                  <div class="text-[11px] text-slate-400">{esc(r.designation || '')}</div>
+                </td>
+                <td class="px-4 py-3 text-slate-500 font-mono text-xs">{esc(r.emp_code || '—')}</td>
+                <td class="px-4 py-3 text-slate-500">{esc(r.department || '—')}</td>
+                <td class="px-4 py-3 text-slate-500">{r.check_in ? fmtDateTime(r.check_in).split(', ')[1] : '—'}</td>
+                <td class="px-4 py-3 text-slate-500">{r.check_out ? fmtDateTime(r.check_out).split(', ')[1] : '—'}</td>
+                <td class="px-4 py-3">{r.status ? <Chip status={r.status} /> : <span class="text-xs text-slate-400">not marked</span>}</td>
+                <td class="px-4 py-3"><StatusPicker employeeId={r.employee_id} current={r.status} /></td>
+              </tr>
+            ))}
+          </Table>
+
+          {notMarked.length > 0 && (
+            <div class="mt-4">
+              <h3 class="font-bold text-slate-900 mb-2 text-sm">Not marked on {day} ({notMarked.length})</h3>
+              <div class="flex flex-wrap gap-2">
+                {notMarked.map((r) => (
+                  <form method="post" action="/admin/attendance/mark" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <input type="hidden" name="employee_id" value={String(r.employee_id)} />
+                    <input type="hidden" name="work_date" value={day} />
+                    <input type="hidden" name="back" value={`/admin/attendance?day=${day}`} />
+                    <span class="text-sm text-slate-700 font-medium">{esc(r.full_name)}</span>
+                    <select name="status" class="text-xs rounded-lg border border-slate-300 px-2 py-1">
+                      <option value="absent" selected>Absent</option>
+                      <option value="leave">Leave</option>
+                      <option value="rest">Rest / Off</option>
+                      <option value="present">Present</option>
+                      <option value="half_day">Half Day</option>
+                    </select>
+                    <button class="text-xs font-semibold px-2 py-1 rounded-lg bg-rose-600 text-white hover:bg-rose-700">Mark</button>
+                  </form>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div class="grid lg:grid-cols-2 gap-6 mt-8">
+            <div>
+              <h2 class="font-bold text-slate-900 mb-3">Recent attendance</h2>
+              <div class="space-y-2">
+                {recent.results.length === 0 && <Empty icon="fa-clock-rotate-left" title="No records yet" />}
+                {(recent.results as any[]).map((r) => (
+                  <Card class="p-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="min-w-0">
+                        <div class="text-sm font-semibold text-slate-700 truncate">{esc(r.full_name)}</div>
+                        <div class="text-xs text-slate-400">{fmtDate(r.work_date)} · {r.check_in ? fmtDateTime(r.check_in).split(', ')[1] : '—'}</div>
+                      </div>
+                      <Chip status={r.status} />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 class="font-bold text-slate-900 mb-3">Individual view</h2>
+              <Card class="p-4">
+                <p class="text-sm text-slate-500 mb-3">Kisi bhi employee ka poora day-wise record dekhne ke liye upar date picker me usse select karo — ya table me uske naam pe click karo.</p>
+                <div class="flex flex-wrap gap-2">
+                  {rows.slice(0, 12).map((r) => (
+                    <a href={`/admin/attendance?day=${day}&emp=${r.employee_id}&month=${month}`} class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 hover:border-red-400 hover:text-red-600">
+                      {esc(r.full_name)}
+                    </a>
+                  ))}
                 </div>
               </Card>
-            ))}
+            </div>
           </div>
-        </div>
-      </div>
-
-      <h2 class="font-bold text-slate-900 mt-8 mb-3">Month summary by employee</h2>
-      <Table cols={['Employee', 'Code', 'Department', 'Present', 'Late', 'Absent', `Status ${day}`]}>
-        {(perEmp.results as any[]).map((r) => (
-          <tr class="hover:bg-slate-50">
-            <td class="px-4 py-3 font-medium text-slate-800">{esc(r.full_name)}</td>
-            <td class="px-4 py-3 text-slate-500 font-mono text-xs">{esc(r.emp_code || '—')}</td>
-            <td class="px-4 py-3 text-slate-500">{esc(r.department || '—')}</td>
-            <td class="px-4 py-3 font-semibold text-emerald-600">{r.present_m ?? 0}</td>
-            <td class="px-4 py-3 font-semibold text-amber-600">{r.late_m ?? 0}</td>
-            <td class="px-4 py-3 font-semibold text-rose-600">{r.absent_m ?? 0}</td>
-            <td class="px-4 py-3">{r.today_status ? <Chip status={r.today_status} /> : <span class="text-xs text-slate-400">not marked</span>}</td>
-          </tr>
-        ))}
-      </Table>
+        </>
+      )}
     </StaffLayout>
   )
+})
+
+// ============================================================
+// ATTENDANCE MARK — admin kisi bhi employee ka status set/update karta hai
+// (rest / team member absent ho gaya => admin yahan se Absent/Leave/Rest mark kare)
+// ============================================================
+adminRoutes.post('/attendance/mark', async (c) => {
+  const user = c.get('user')!
+  const f = await c.req.parseBody()
+  const employeeId = Number(f.employee_id || 0)
+  const workDate = String(f.work_date || '').slice(0, 10)
+  const status = String(f.status || 'present')
+  const back = String(f.back || '/admin/attendance')
+  const allowed = ['present', 'late', 'half_day', 'absent', 'leave', 'rest']
+  if (!employeeId || !workDate || !allowed.includes(status)) return c.redirect(back)
+
+  const now = istNow()
+  const note =
+    status === 'rest' ? 'Marked rest / weekly off by admin'
+    : status === 'absent' ? 'Marked absent by admin'
+    : status === 'leave' ? 'Marked leave by admin'
+    : status === 'late' ? 'Marked late by admin'
+    : status === 'half_day' ? 'Marked half day by admin'
+    : null
+
+  // Upsert: agar us din ka record nahi hai to banao, warna status update karo.
+  const existing: any = await c.env.DB.prepare(
+    `SELECT id FROM attendance WHERE employee_id=? AND work_date=?`
+  ).bind(employeeId, workDate).first()
+
+  if (existing) {
+    await c.env.DB.prepare(`UPDATE attendance SET status=?, notes=? WHERE id=?`).bind(status, note, existing.id).run()
+  } else {
+    // Admin-marked "present" ke liye check-in time abhi ka record kar dete hain.
+    const checkIn = status === 'present' || status === 'late' || status === 'half_day' ? now.stamp : null
+    await c.env.DB.prepare(
+      `INSERT INTO attendance (employee_id, work_date, check_in, status, notes) VALUES (?,?,?,?,?)`
+    ).bind(employeeId, workDate, checkIn, status, note).run()
+  }
+
+  await logActivity(c.env.DB, {
+    userId: user.id, actor: user.full_name, action: 'attendance.mark',
+    entity: 'attendance', details: `emp#${employeeId} ${workDate} -> ${status}`,
+  })
+  return c.redirect(back)
 })
 
 adminRoutes.get('/attendance/export', async (c) => {

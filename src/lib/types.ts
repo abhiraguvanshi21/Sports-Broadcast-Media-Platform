@@ -54,6 +54,16 @@ export const TASK_STATUS: Record<string, string> = {
   cancelled: 'Cancelled',
 }
 
+// Attendance statuses (admin can mark any of these day-wise)
+export const ATTENDANCE_STATUS: Record<string, string> = {
+  present: 'Present',
+  late: 'Late',
+  half_day: 'Half Day',
+  absent: 'Absent',
+  leave: 'Leave',
+  rest: 'Rest / Weekly Off',
+}
+
 export const CHIP_CLASS: Record<string, string> = {
   // statuses -> tailwind classes
   received: 'bg-slate-100 text-slate-700 ring-slate-200',
@@ -80,6 +90,7 @@ export const CHIP_CLASS: Record<string, string> = {
   absent: 'bg-rose-100 text-rose-800 ring-rose-200',
   late: 'bg-amber-100 text-amber-800 ring-amber-200',
   leave: 'bg-blue-100 text-blue-800 ring-blue-200',
+  rest: 'bg-slate-200 text-slate-700 ring-slate-300',
   low: 'bg-slate-100 text-slate-700 ring-slate-200',
   medium: 'bg-amber-100 text-amber-800 ring-amber-200',
   high: 'bg-orange-100 text-orange-800 ring-orange-200',

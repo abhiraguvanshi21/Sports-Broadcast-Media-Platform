@@ -3,7 +3,7 @@
 // Kaam: date/time paisa format karna, slug banana, text safe (esc) karna,
 // rate-limit, aur activity log likhna.
 // ============================================================
-import { CHIP_CLASS, BOOKING_STATUS, EVENT_STATUS, TASK_STATUS } from './types'
+import { CHIP_CLASS, BOOKING_STATUS, EVENT_STATUS, TASK_STATUS, ATTENDANCE_STATUS } from './types'
 
 export function fmtDate(d?: string | null): string {
   if (!d) return '—'
@@ -40,7 +40,7 @@ export function statusClass(status?: string | null): string {
 
 export function statusLabel(status?: string | null): string {
   if (!status) return '—'
-  return BOOKING_STATUS[status] || EVENT_STATUS[status] || TASK_STATUS[status] || status.replace(/_/g, ' ')
+  return BOOKING_STATUS[status] || EVENT_STATUS[status] || TASK_STATUS[status] || ATTENDANCE_STATUS[status] || status.replace(/_/g, ' ')
 }
 
 /** Generate booking code like SBM-2026-A1B2C3 */
