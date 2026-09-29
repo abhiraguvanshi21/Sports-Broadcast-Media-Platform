@@ -161,8 +161,10 @@ Role access is enforced **server-side** on every protected route, so a customer 
 ## Deployment
 
 - **Platform**: Cloudflare Pages / Workers (Genspark Hosted Deploy).
-- **Status**: ✅ Live & verified (redeployed 2026-09-28 via Genspark Hosted Deploy).
-- **Last Updated**: 2026-09-28
+- **Live URL**: https://0fc78a65-5636-4d4f-800e-f105bddb1b91.vip.gensparksite.com
+- **GitHub**: https://github.com/abhiraguvanshi21/Sports-Broadcast-Media-Platform
+- **Status**: ✅ Live & verified (redeployed 2026-09-29 via Genspark Hosted Deploy — day-wise attendance on dashboard, admin absent marking, individual employee view).
+- **Last Updated**: 2026-09-29
 
 ## Local Development
 
